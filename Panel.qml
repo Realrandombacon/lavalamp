@@ -175,6 +175,7 @@ Item {
 
     property string label: ""
     property string detail: ""
+    property string hint: ""
     property real minimum: 0
     property real maximum: 1
     property real step: 0.05
@@ -184,7 +185,47 @@ Item {
     signal moved(real v)
     signal released()
 
+    // Hover 1s without moving -> hint tooltip. z-lift while visible so the
+    // tooltip draws over the rows below instead of under them.
     implicitHeight: Math.max(labelText.implicitHeight, slider.implicitHeight)
+    z: tip.visible ? 2 : 0
+
+    HoverHandler {
+      onHoveredChanged: {
+        if (hovered && row.hint !== "") hintTimer.restart()
+        else { hintTimer.stop(); tip.visible = false }
+      }
+    }
+
+    Timer {
+      id: hintTimer
+      interval: 1000
+      onTriggered: tip.visible = row.hint !== ""
+    }
+
+    Rectangle {
+      id: tip
+      visible: false
+      x: 0
+      y: parent.height + Style.space(4)
+      width: Math.min(tipText.implicitWidth + Style.space(20), row.width)
+      height: tipText.implicitHeight + Style.space(12)
+      radius: Style.cornerRadius
+      color: Color.popups.background
+      border.width: Style.normalBorderWidth
+      border.color: Color.popups.border
+
+      Text {
+        id: tipText
+        anchors.centerIn: parent
+        width: Math.min(implicitWidth, tip.width - Style.space(16))
+        wrapMode: Text.WordWrap
+        text: row.hint
+        color: Color.popups.text
+        font.family: Style.font.family
+        font.pixelSize: Style.font.caption
+      }
+    }
 
     Text {
       id: labelText
@@ -322,6 +363,7 @@ Item {
           PanelRow {
             width: parent.width
             label: "Blobs"
+            hint: "Target number of wax blobs. The lamp constantly merges and splits around this count, so it may drift a little either way."
             detail: Math.round(root.current("blobCount", 14)) + ""
             minimum: 4; maximum: 32; step: 1; integer: true
             value: root.current("blobCount", 14)
@@ -332,6 +374,7 @@ Item {
           PanelRow {
             width: parent.width
             label: "Blob size"
+            hint: "Base radius of the wax blobs, as a fraction of screen height."
             detail: Math.round(root.current("blobSize", 0.085) * 1000) / 10 + " %"
             minimum: 0.03; maximum: 0.20; step: 0.005
             value: root.current("blobSize", 0.085)
@@ -342,6 +385,7 @@ Item {
           PanelRow {
             width: parent.width
             label: "Size spread"
+            hint: "How much blob sizes vary around the base: 0 gives uniform blobs, higher values mix large and small ones."
             detail: Math.round(root.current("sizeSpread", 0.55) * 100) + " %"
             minimum: 0; maximum: 1; step: 0.05
             value: root.current("sizeSpread", 0.55)
@@ -360,6 +404,7 @@ Item {
           PanelRow {
             width: parent.width
             label: "Speed"
+            hint: "Overall pace of the convection loop: how fast blobs rise, sink and drift."
             detail: Math.round(root.current("speed", 1.0) * 10) / 10 + "x"
             minimum: 0.1; maximum: 3; step: 0.1
             value: root.current("speed", 1.0)
@@ -370,6 +415,7 @@ Item {
           PanelRow {
             width: parent.width
             label: "Physics"
+            hint: "Strength of the heater in the lamp's base: hotter blobs rise more eagerly and split more often."
             detail: Math.round(root.current("heatPower", 1.0) * 10) / 10 + "x"
             minimum: 0.1; maximum: 2; step: 0.1
             value: root.current("heatPower", 1.0)
@@ -380,6 +426,7 @@ Item {
           PanelRow {
             width: parent.width
             label: "Touch"
+            hint: "How strongly your cursor stirs and warms the wax; warmed blobs rise on their own. 0 disables pointer play."
             detail: Math.round(root.current("touch", 1.0) * 100) / 100 + ""
             minimum: 0; maximum: 2; step: 0.05
             value: root.current("touch", 1.0)
@@ -434,6 +481,7 @@ Item {
           PanelRow {
             width: parent.width
             label: "Merge depth"
+            hint: "How close two slow-moving blobs must be before surface tension lets them flow together."
             detail: Math.round(root.current("mergeThreshold", 0.45) * 100) + " %"
             minimum: 0.1; maximum: 0.9; step: 0.01
             value: root.current("mergeThreshold", 0.45)
@@ -444,6 +492,7 @@ Item {
           PanelRow {
             width: parent.width
             label: "Merge speed"
+            hint: "How quickly blobs in contact coalesce once they start merging."
             detail: Math.round(root.current("mergeSpeed", 0.35) * 100) / 100 + ""
             minimum: 0.02; maximum: 1.0; step: 0.01
             value: root.current("mergeSpeed", 0.35)
@@ -454,6 +503,7 @@ Item {
           PanelRow {
             width: parent.width
             label: "Split speed"
+            hint: "Rising speed a blob needs before it can tear in two. Low values make a lazier, gooier lamp; too high and blobs split before they can merge."
             detail: Math.round(root.current("splitSpeed", 0.16) * 100) / 100 + ""
             minimum: 0.02; maximum: 0.8; step: 0.01
             value: root.current("splitSpeed", 0.16)
@@ -523,6 +573,7 @@ Item {
           PanelRow {
             width: parent.width
             label: "Hue shift"
+            hint: "Rotates the wax palette around the color wheel. 0 is the classic lava orange."
             detail: Math.round(root.current("hue", 0.0) * 100) / 100 + ""
             minimum: -0.5; maximum: 0.5; step: 0.01
             value: root.current("hue", 0.0)
@@ -533,6 +584,7 @@ Item {
           PanelRow {
             width: parent.width
             label: "Glow"
+            hint: "Brightness of the hot cores inside each blob."
             detail: Math.round(root.current("glow", 1.0) * 100) / 100 + ""
             minimum: 0; maximum: 2; step: 0.05
             value: root.current("glow", 1.0)
@@ -565,6 +617,7 @@ Item {
           PanelRow {
             width: parent.width
             label: "Bg hue top"
+            hint: "Rotates the background gradient's top color, independently of the wax."
             detail: Math.round(root.current("bgHueTop", 0.0) * 360) + "°"
             minimum: -0.5; maximum: 0.5; step: 0.01
             value: root.current("bgHueTop", 0.0)
@@ -575,6 +628,7 @@ Item {
           PanelRow {
             width: parent.width
             label: "Bg hue bottom"
+            hint: "Rotates the background gradient's bottom color, independently of the wax."
             detail: Math.round(root.current("bgHueBottom", 0.0) * 360) + "°"
             minimum: -0.5; maximum: 0.5; step: 0.01
             value: root.current("bgHueBottom", 0.0)
@@ -602,6 +656,7 @@ Item {
           PanelRow {
             width: parent.width
             label: "Accent hue"
+            hint: "Shifts the live Omarchy accent color and window borders to match your lamp."
             detail: Math.round(root.current("accentHue", 0.0) * 360) + "°"
             minimum: -0.5; maximum: 0.5; step: 0.01
             value: root.current("accentHue", 0.0)
@@ -612,6 +667,7 @@ Item {
           PanelRow {
             width: parent.width
             label: "Accent sat"
+            hint: "Saturation of the shifted Omarchy accent: 0 is gray, 2 is extra vivid."
             detail: Math.round(root.current("accentSat", 1.0) * 100) + " %"
             minimum: 0; maximum: 2; step: 0.05
             value: root.current("accentSat", 1.0)
