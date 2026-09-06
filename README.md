@@ -18,7 +18,7 @@ the lamp's molten palette.
 | **Live wallpaper** (`Background.qml` + `Physics.js` + GLSL shader) | Full-screen convection simulation rendered as metaballs, on every monitor |
 | **Control panel** (`Panel.qml`) | Every knob on a floating card; changes apply live and persist |
 | **Bar widget** (`BarWidget.qml`) | Flame icon in the bar's right section — click to open the panel |
-| **Omarchy theme** (`colors.toml`, `neovim.lua`, `icons.theme`, `backgrounds/`) | Warm near-black background (`#140802`), molten-orange accent (`#FF7733`), red-orange gradient window borders, matching Neovim colorscheme and icon theme |
+| **Omarchy theme** (`colors.toml`, `neovim.lua`, `icons.theme`, `backgrounds/`) | Warm near-black background (`#140802`), molten-orange accent (`#FF7733`), red-orange gradient window borders, matching Neovim colorscheme and icon theme (see the install note) |
 | **Physics test suite** (`tests/`) | Headless regression test: minutes of simulated lamp time with invariants |
 
 Install both halves and the desktop reads as one object: the lamp glows
@@ -101,12 +101,19 @@ o.bind("SUPER + ALT + L", "Lava lamp panel",
        "omarchy-shell shell toggle io.github.realrandombacon.lavalamp")
 ```
 
-### The color theme (terminal, borders, Neovim, icons)
+### The color theme (borders, bar, icons, Neovim)
 
 ```
 omarchy theme install https://github.com/Realrandombacon/lavalamp
 omarchy theme set lavalamp
 ```
+
+Note: Omarchy ignores `neovim.lua` in themes installed from a git repo
+(a deliberate restriction), so the Neovim colorscheme only applies if
+you install the theme manually — clone or symlink this repo into
+`~/.config/omarchy/themes/lavalamp` instead of using `omarchy theme
+install`. Everything else (colors, window borders, icons, background)
+works either way.
 
 Back to a stock look any time with `omarchy theme set hackerman` (or
 any other theme) — the lamp keeps running.
