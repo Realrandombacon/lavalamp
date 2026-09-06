@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "id": "io.github.realrandombacon.lavalamp",
+  "name": "Lava Lamp",
+  "version": "1.1.0",
+  "author": "Bacon",
+  "license": "MIT",
+  "repository": "https://github.com/Realrandombacon/lavalamp",
+  "description": "Live lava lamp background — real convection physics, merging wax, pointer play and a live control panel",
+  "kinds": [
+    "service",
+    "panel",
+    "bar-widget"
+  ],
+  "entryPoints": {
+    "service": "Background.qml",
+    "panel": "Panel.qml",
+    "barWidget": "BarWidget.qml"
+  },
+  "barWidget": {
+    "displayName": "Lava Lamp",
+    "description": "Open the lava lamp control panel",
+    "category": "Delight",
+    "allowMultiple": false,
+    "defaultSection": "right"
+  }
+}
