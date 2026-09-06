@@ -14,6 +14,8 @@
   window, and ticks at 10 Hz on battery.
 - Correct physics aspect on non-16:9 screens; the panel scrolls instead of
   overflowing on small screens.
+- Hover a slider for one second to see a short description of what it
+  changes.
 - 13 color presets from stock Omarchy themes + 3 house blends, with a
   "Custom" read-out; independent background hue (top/bottom) and live
   Omarchy accent re-tint (from 1.0.0).
