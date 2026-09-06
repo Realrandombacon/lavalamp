@@ -11,6 +11,7 @@
   "splitSpeed": 0.16,
   "hue": 0.0,
   "glow": 1.0,
+  "sat": 1.0,
   "bgHueTop": 0.0,
   "bgHueBottom": 0.0,
   "accentHue": 0.0,

@@ -117,25 +117,28 @@ Item {
   //
   // The theme-inspired presets are computed from each stock Omarchy
   // theme's colors.toml (accent -> wax shift, background -> bg shift), so
-  // the lamp evokes the native palette. Note the bg shifts for blue/indigo
-  // themes are negative — the wax/base are already red-orange, so reaching
-  // blue goes the short way around. Neutral-background themes (gruvbox,
-  // matte-black...) and light themes (white can't be reached by hue
-  // rotation) are excluded. Toxic / Ocean / Ultraviolet are house blends.
+  // the lamp evokes the native palette. `sat` scales the wax's vividness
+  // toward the accent's own HSV saturation (base wax is ~0.93), so muted
+  // accents like Nord or Kanagawa get muted wax instead of a garish lamp.
+  // Note the bg shifts for blue/indigo themes are negative — the wax/base
+  // are already red-orange, so reaching blue goes the short way around.
+  // Neutral-background themes (gruvbox, matte-black...) and light themes
+  // (white can't be reached by hue rotation) are excluded. Toxic / Ocean /
+  // Ultraviolet are house blends.
   readonly property var presets: ({
-    classic: { hue: 0.0, glow: 1.0, bgHueTop: 0.0, bgHueBottom: 0.0 },
-    hackerman: { hue: 0.30, glow: 1.0, bgHueTop: -0.38, bgHueBottom: -0.38 },
-    "tokyo-night": { hue: -0.46, glow: 1.0, bgHueTop: -0.38, bgHueBottom: -0.38 },
-    catppuccin: { hue: -0.47, glow: 1.0, bgHueTop: -0.36, bgHueBottom: -0.36 },
-    nord: { hue: -0.49, glow: 1.0, bgHueTop: -0.42, bgHueBottom: -0.42 },
-    kanagawa: { hue: 0.07, glow: 1.0, bgHueTop: -0.36, bgHueBottom: -0.36 },
-    everforest: { hue: 0.41, glow: 1.0, bgHueTop: -0.46, bgHueBottom: -0.46 },
-    "osaka-jade": { hue: 0.35, glow: 1.0, bgHueTop: 0.41, bgHueBottom: 0.41 },
-    lumon: { hue: 0.49, glow: 1.0, bgHueTop: -0.46, bgHueBottom: -0.46 },
-    "retro-82": { hue: 0.0, glow: 1.0, bgHueTop: -0.44, bgHueBottom: -0.44 },
-    toxic: { hue: 0.30, glow: 1.2, bgHueTop: 0.30, bgHueBottom: 0.30 },
-    ocean: { hue: 0.45, glow: 1.0, bgHueTop: -0.42, bgHueBottom: -0.42 },
-    ultraviolet: { hue: -0.35, glow: 1.4, bgHueTop: -0.28, bgHueBottom: -0.28 }
+    classic: { hue: 0.0, sat: 1.0, glow: 1.0, bgHueTop: 0.0, bgHueBottom: 0.0 },
+    hackerman: { hue: 0.30, sat: 0.52, glow: 1.0, bgHueTop: -0.38, bgHueBottom: -0.38 },
+    "tokyo-night": { hue: -0.46, sat: 0.55, glow: 1.0, bgHueTop: -0.38, bgHueBottom: -0.38 },
+    catppuccin: { hue: -0.47, sat: 0.48, glow: 1.0, bgHueTop: -0.36, bgHueBottom: -0.36 },
+    nord: { hue: -0.49, sat: 0.36, glow: 1.0, bgHueTop: -0.42, bgHueBottom: -0.42 },
+    kanagawa: { hue: 0.07, sat: 0.30, glow: 1.0, bgHueTop: -0.36, bgHueBottom: -0.36 },
+    everforest: { hue: 0.41, sat: 0.34, glow: 1.0, bgHueTop: -0.46, bgHueBottom: -0.46 },
+    "osaka-jade": { hue: 0.35, sat: 0.49, glow: 1.0, bgHueTop: 0.41, bgHueBottom: 0.41 },
+    lumon: { hue: 0.49, sat: 0.44, glow: 1.0, bgHueTop: -0.46, bgHueBottom: -0.46 },
+    "retro-82": { hue: 0.0, sat: 0.62, glow: 1.0, bgHueTop: -0.44, bgHueBottom: -0.44 },
+    toxic: { hue: 0.30, sat: 1.0, glow: 1.2, bgHueTop: 0.30, bgHueBottom: 0.30 },
+    ocean: { hue: 0.45, sat: 0.8, glow: 1.0, bgHueTop: -0.42, bgHueBottom: -0.42 },
+    ultraviolet: { hue: -0.35, sat: 0.9, glow: 1.4, bgHueTop: -0.28, bgHueBottom: -0.28 }
   })
 
   readonly property var presetOptions: [
@@ -592,6 +595,17 @@ Item {
             onReleased: root.save()
           }
 
+          PanelRow {
+            width: parent.width
+            label: "Wax sat"
+            hint: "How vivid the wax colors are: 1 is classic lava, lower matches muted theme accents, 0 is monochrome."
+            detail: Math.round(root.current("sat", 1.0) * 100) + " %"
+            minimum: 0; maximum: 1; step: 0.05
+            value: root.current("sat", 1.0)
+            onMoved: function(v) { root.apply({ sat: v }) }
+            onReleased: root.save()
+          }
+
           Dropdown {
             id: presetDropdown
             width: parent.width
@@ -709,7 +723,7 @@ Item {
                            mergeThreshold: 0.45, mergeSpeed: 0.35,
                            splitSpeed: 0.16, buoyancy: 0.55, drag: 1.6,
                            repulsion: 4.5, ecoPause: true,
-                           hue: 0.0, glow: 1.0,
+                           hue: 0.0, glow: 1.0, sat: 1.0,
                            bgHueTop: 0.0, bgHueBottom: 0.0,
                            accentHue: 0.0, accentSat: 1.0 })
               root.save()

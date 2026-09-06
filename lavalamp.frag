@@ -16,6 +16,8 @@ layout(std140, binding = 0) uniform buf {
     float uAspect;      // width / height, keeps blobs circular
     float uHue;         // -0.5..0.5 hue rotation of the wax palette
     float uGlow;        // 0..1 ambient glow around the blobs
+    float uSat;         // 0..1.5 wax saturation multiplier (theme presets
+                        // scale it to their accent's vividness)
     float uBgHueTop;    // -0.5..0.5 hue rotation of the background, top edge
     float uBgHueBottom; // -0.5..0.5 hue rotation of the background, bottom edge
     vec4 blob0;   // x, y, radius, heat
@@ -75,9 +77,11 @@ vec3 heatColor(float heat) {
     vec3 hot    = vec3(1.00, 0.62, 0.10);
     vec3 col = heat < 0.5 ? mix(cold, mid, heat * 2.0)
                           : mix(mid, hot, (heat - 0.5) * 2.0);
-    // uHue rotates the whole palette around the color wheel.
+    // uHue rotates the whole palette around the color wheel; uSat scales
+    // its vividness so muted theme accents get muted wax.
     vec3 hsv = rgb2hsv(col);
     hsv.x = fract(hsv.x + ubuf.uHue);
+    hsv.y = clamp(hsv.y * ubuf.uSat, 0.0, 1.0);
     return hsv2rgb(hsv);
 }
 

@@ -20,6 +20,7 @@ Item {
   // Lamp appearance knobs (control panel writes these; defaults for now).
   property real lampHue: 0.0
   property real lampGlow: 1.0
+  property real lampSat: 1.0
   // Background-only hue rotation, top and bottom edges independent.
   property real lampBgHueTop: 0.0
   property real lampBgHueBottom: 0.0
@@ -77,6 +78,7 @@ Item {
       splitSpeed: Physics.clamp(Number(c.splitSpeed) || 0.16, 0.02, 0.8),
       hue: Physics.clamp(Number(c.hue) || 0.0, -0.5, 0.5),
       glow: Physics.clamp(c.glow === 0 ? 0 : (Number(c.glow) || 1.0), 0, 2),
+      sat: Physics.clamp(c.sat === 0 ? 0 : (Number(c.sat) || 1.0), 0, 1.5),
       bgHueTop: Physics.clamp(Number(c.bgHueTop) || 0.0, -0.5, 0.5),
       bgHueBottom: Physics.clamp(Number(c.bgHueBottom) || 0.0, -0.5, 0.5),
       accentHue: Physics.clamp(Number(c.accentHue) || 0.0, -0.5, 0.5),
@@ -95,6 +97,7 @@ Item {
     simTimeScale = next.speed
     lampHue = next.hue
     lampGlow = next.glow
+    lampSat = next.sat
     lampBgHueTop = next.bgHueTop
     lampBgHueBottom = next.bgHueBottom
     if (accentChanged) {
@@ -563,6 +566,7 @@ Item {
         property real uAspect: width / Math.max(height, 1)
         property real uHue: root.lampHue
         property real uGlow: root.lampGlow
+        property real uSat: root.lampSat
         property real uBgHueTop: root.lampBgHueTop
         property real uBgHueBottom: root.lampBgHueBottom
         property vector4d blob0: root.blobVec(0)
