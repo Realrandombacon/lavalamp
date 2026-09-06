@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.0 — 2026-09-06
+
+- Live/Theme toggle in the panel header: turn the lamp off to fall back to
+  whatever background the last real `omarchy theme set` left active,
+  without disabling the plugin. Persists like every other setting.
+
 ## 1.1.0 — 2026-09-06
 
 - Liquid dynamics: blobs merge (volume/momentum/heat conserved) and pinch

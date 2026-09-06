@@ -340,6 +340,29 @@ Item {
           }
 
           Text {
+            id: enabledToggle
+            anchors.right: closeText.left
+            anchors.rightMargin: Style.space(14)
+            anchors.verticalCenter: parent.verticalCenter
+            text: root.current("lampEnabled", true) ? "● Live" : "○ Theme"
+            color: root.current("lampEnabled", true) ? Color.accent : Qt.darker(Color.popups.text, 1.35)
+            font.family: Style.font.family
+            font.pixelSize: Style.font.caption
+
+            MouseArea {
+              anchors.fill: parent
+              anchors.margins: -Style.space(6)
+              hoverEnabled: true
+              cursorShape: Qt.PointingHandCursor
+              onClicked: {
+                root.apply({ lampEnabled: !root.current("lampEnabled", true) })
+                root.save()
+              }
+            }
+          }
+
+          Text {
+            id: closeText
             anchors.right: parent.right
             anchors.verticalCenter: parent.verticalCenter
             text: "✕"
@@ -725,7 +748,8 @@ Item {
                            repulsion: 4.5, ecoPause: true,
                            hue: 0.0, glow: 1.0, sat: 1.0,
                            bgHueTop: 0.0, bgHueBottom: 0.0,
-                           accentHue: 0.0, accentSat: 1.0 })
+                           accentHue: 0.0, accentSat: 1.0,
+                           lampEnabled: true })
               root.save()
             }
           }

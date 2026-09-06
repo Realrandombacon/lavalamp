@@ -15,5 +15,6 @@
   "bgHueTop": 0.0,
   "bgHueBottom": 0.0,
   "accentHue": 0.0,
-  "accentSat": 1.0
+  "accentSat": 1.0,
+  "lampEnabled": true
 }

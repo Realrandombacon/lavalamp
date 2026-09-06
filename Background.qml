@@ -29,6 +29,9 @@ Item {
   // same IPC the theme switcher uses, plus a live Hyprland border keyword.
   property real lampAccentHue: 0.0
   property real lampAccentSat: 1.0
+  // Master toggle: false shows the real current Omarchy theme background
+  // (currentBackground, tracked below) instead of the live simulation.
+  property bool lampEnabled: true
   // Pointer play: last cursor position in shader space + whether the cursor
   // is over a background window. Fed into the sim each tick; the strength
   // easing lives in Physics.substep.
@@ -62,7 +65,8 @@ Item {
                               speed: 1.0, heatPower: 1.0, touch: 1.0, hue: 0.0, glow: 1.0,
                               bgHueTop: 0.0, bgHueBottom: 0.0,
                               accentHue: 0.0, accentSat: 1.0,
-                              buoyancy: 0.55, drag: 1.6, repulsion: 4.5 })
+                              buoyancy: 0.55, drag: 1.6, repulsion: 4.5,
+                              lampEnabled: true })
 
   function applyLampConfig(cfg) {
     var c = cfg || {}
@@ -89,7 +93,8 @@ Item {
       buoyancy: Physics.clamp(Number(c.buoyancy) || 0.55, 0.05, 1.2),
       drag: Physics.clamp(Number(c.drag) || 1.6, 0.3, 4),
       repulsion: Physics.clamp(Number(c.repulsion) || 4.5, 1, 10),
-      ecoPause: c.ecoPause !== false && c.ecoPause !== 0
+      ecoPause: c.ecoPause !== false && c.ecoPause !== 0,
+      lampEnabled: c.lampEnabled !== false && c.lampEnabled !== 0
     }
     var accentChanged = next.accentHue !== lampConfig.accentHue || next.accentSat !== lampConfig.accentSat
     lampConfig = next
@@ -100,6 +105,7 @@ Item {
     lampSat = next.sat
     lampBgHueTop = next.bgHueTop
     lampBgHueBottom = next.bgHueBottom
+    lampEnabled = next.lampEnabled
     if (accentChanged) {
       lampAccentHue = next.accentHue
       lampAccentSat = next.accentSat
@@ -556,6 +562,23 @@ Item {
       WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
       exclusionMode: ExclusionMode.Ignore
 
+      // Real Omarchy theme background, shown when the lamp is toggled off
+      // (enabledToggle in Panel.qml). Sits under the shader; currentBackground
+      // is the same path the stock omarchy.background service tracks, kept
+      // fresh by refreshBackground()/the IPC handlers above, so this always
+      // matches whatever the last real `omarchy theme set` left active.
+      Image {
+        id: themeBase
+        anchors.fill: parent
+        source: root.imageUrl(root.currentBackground)
+        fillMode: Image.PreserveAspectCrop
+        asynchronous: true
+        cache: false
+        smooth: true
+        mipmap: true
+        visible: !root.lampEnabled
+      }
+
       // LAVA LAMP: live metaball rendering fed by the shared Physics.js sim.
       // Property names match the uniform block members in lavalamp.frag.
       // Transition/selector machinery below stays intact but is inert while
@@ -563,6 +586,7 @@ Item {
       ShaderEffect {
         id: lavaBase
         anchors.fill: parent
+        visible: root.lampEnabled
         property real uAspect: width / Math.max(height, 1)
         property real uHue: root.lampHue
         property real uGlow: root.lampGlow
