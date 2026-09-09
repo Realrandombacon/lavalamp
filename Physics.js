@@ -178,11 +178,15 @@ function substep(state, dt, aspect, p) {
             var e = A.bands[b.band];
             if (e > 0.01) {
                 var rate = 2.5 + b.band * 1.7;
-                var amp = dance * e * dt;
-                b.vx += Math.sin(state.time * rate + b.phase) * amp * 1.4
-                      + (Math.random() - 0.5) * amp * 0.9;
-                b.vy += Math.cos(state.time * rate * 0.83 + b.phase) * amp * 0.5;
-                var glow = e * dance * dt * 3.0;
+                // A raw sinusoid force displaces as 1/rate^2 under drag,
+                // which made every band above the first invisible; scale
+                // by rate^2 so the sway amplitude is the same on all bands.
+                var amp = dance * e * rate * rate * dt * 0.09;
+                b.vx += Math.sin(state.time * rate + b.phase) * amp
+                      + (Math.random() - 0.5) * amp * 0.8;
+                b.vy += Math.cos(state.time * rate * 0.83 + b.phase) * amp * 0.45;
+                // Peak-and-decay glow: NOT scaled by dt, that made it ~0.002.
+                var glow = e * dance * 0.9;
                 if (glow > b.pulse) b.pulse = glow;
             }
         }
