@@ -287,11 +287,26 @@ function substep(state, dt, aspect, p) {
 // unused slots zeroed (r=0 contributes nothing to the field).
 function packUniforms(state) {
     var data = new Float32Array(MAX_BLOBS * 4);
+    var A = state.audio || {};
+    var dance = state.params.musicDance || 0;
     for (var i = 0; i < state.blobs.length; i++) {
         var b = state.blobs[i];
+        var rr = b.r;
+        // Music swell: each blob breathes with the energy of its own band
+        // — render-only (physics keeps the true r, so merging and splitting
+        // are untouched). The slow sine makes it pump instead of just
+        // sitting swollen while its band sings.
+        if (dance > 0 && A.bands && A.bands.length > b.band) {
+            var e = A.bands[b.band];
+            if (e > 0.01) {
+                var rate = 2.5 + b.band * 1.7;
+                var breathe = e * dance * (0.5 + 0.5 * Math.sin(state.time * rate * 0.6 + b.phase)) * 0.8;
+                rr = b.r * (1 + breathe);
+            }
+        }
         data[i * 4] = b.x;
         data[i * 4 + 1] = b.y;
-        data[i * 4 + 2] = b.r;
+        data[i * 4 + 2] = rr;
         data[i * 4 + 3] = clamp(b.heat + (b.pulse || 0), 0, 1);
     }
     return data;

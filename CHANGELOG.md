@@ -4,10 +4,12 @@
 
 - Blob dance: every blob is assigned its own frequency band at spawn and
   sways, jitters and pulses its glow to the energy of that band — bass
-  blobs rumble low, high blobs dance to the highs. Splits inherit the
-  parent's band (with one child hopping to a neighbor band), merges take
-  the quieter band. "Blob dance" slider in the Music section controls
-  the amplitude; 0 restores the old calm blobs.
+  blobs rumble low, high blobs dance to the highs. Blobs also breathe:
+  they pump up and down in size with their band's energy (render-only,
+  physics untouched). Splits inherit the parent's band (with one child
+  hopping to a neighbor band), merges take the quieter band. "Blob
+  dance" slider in the Music section controls the amplitude; 0 restores
+  the old calm blobs.
 
 ## 1.3.0 — 2026-09-09
 

@@ -152,6 +152,23 @@ Physics.setAudio(still, 0.5, 0.5, bands);
 for (let i = 0; i < 120; i++) Physics.step(still, 1 / 60, 16 / 9);
 check(still.blobs[0].vx === 0, "musicDance 0 did not mute the vibration");
 check(still.blobs[0].pulse <= 0, "glow pulse did not decay back to rest");
+// blobs swell with their band's energy; a silent band leaves the radius alone
+const sweller = Physics.createState({ blobCount: 1, musicDance: 1.0, jitter: 0 });
+sweller.blobs = [{ ...solo, band: 3, phase: 0, pulse: 0 }];
+Physics.setAudio(sweller, 0.5, 0.5, bands);
+let maxR = 0;
+for (let i = 0; i < 90; i++) {
+  Physics.step(sweller, 1 / 60, 16 / 9);
+  maxR = Math.max(maxR, Physics.packUniforms(sweller)[2]);
+}
+check(maxR > solo.r * 1.05, "singing band did not swell the blob (max r " + maxR.toFixed(3) + ")");
+const muteR = Physics.createState({ blobCount: 1, musicDance: 1.0, jitter: 0 });
+muteR.blobs = [{ ...solo, band: 6, phase: 0, pulse: 0 }];
+Physics.setAudio(muteR, 0.5, 0.5, bands);
+for (let i = 0; i < 90; i++) {
+  Physics.step(muteR, 1 / 60, 16 / 9);
+  check(Math.abs(Physics.packUniforms(muteR)[2] - solo.r) < 1e-6, "silent band changed the rendered radius");
+}
 // the dance must never break the sim invariants
 for (let i = 0; i < 600; i++) {
   Physics.step(dancers, 1 / 60, 16 / 9);
