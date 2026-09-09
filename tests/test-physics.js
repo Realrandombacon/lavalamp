@@ -169,6 +169,28 @@ for (let i = 0; i < 90; i++) {
   Physics.step(muteR, 1 / 60, 16 / 9);
   check(Math.abs(Physics.packUniforms(muteR)[2] - solo.r) < 1e-6, "silent band changed the rendered radius");
 }
+// ---- 10. disco: the whole lamp pops on the beat --------------------------
+const midBlob = { x: 0.5 * 16 / 9, y: 0.5, vx: 0, vy: 0, r: 0.08,
+                  heat: 0.3, mergeCd: 999, splitCd: 999,
+                  band: 3, phase: 0, pulse: 0 };
+const party = Physics.createState({ blobCount: 6, musicReactivity: 1.0, musicDance: 1.0 });
+party.blobs = [{ ...midBlob }];
+Physics.setAudio(party, 0.5, 0.5, new Array(Physics.AUDIO_BANDS).fill(0.5));
+Physics.beatKick(party, 0.3);
+check(party.blobs[0].vy < 0, "disco: mid-screen blob did not jump on the beat");
+check((party.blobs[0].pulse || 0) > 0, "disco: blob did not flash on the beat");
+check(party.audio.beat > 0, "disco: beat envelope missing");
+Physics.step(party, 1 / 60, 16 / 9);
+const beatR = Physics.packUniforms(party)[2];
+for (let i = 0; i < 90; i++) Physics.step(party, 1 / 60, 16 / 9);
+check(Physics.packUniforms(party)[2] < beatR, "disco: beat swell did not relax");
+check(party.audio.beat === 0, "disco: beat envelope did not decay to 0");
+// a muted lamp ignores beats entirely
+const boring = Physics.createState({ blobCount: 6, musicReactivity: 0, musicDance: 1.0 });
+boring.blobs = [{ ...midBlob }];
+Physics.beatKick(boring, 0.3);
+check(boring.blobs[0].vy === 0 && (boring.blobs[0].pulse || 0) === 0,
+      "disco: reactivity 0 did not mute the party");
 // the dance must never break the sim invariants
 for (let i = 0; i < 600; i++) {
   Physics.step(dancers, 1 / 60, 16 / 9);

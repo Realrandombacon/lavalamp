@@ -118,6 +118,7 @@ function substep(state, dt, aspect, p) {
     // bands, so kicks pump energy into the pooled wax exactly like turning
     // the lamp's dial (0 reactivity or silence leaves heat untouched).
     var A = state.audio;
+    A.beat = Math.max(0, (A.beat || 0) - dt * 3.5);
     var heat = p.heatPower * (1 + A.bass * A.bass * p.musicReactivity * 2.0);
     var dance = p.musicDance;
 
@@ -289,25 +290,29 @@ function packUniforms(state) {
     var data = new Float32Array(MAX_BLOBS * 4);
     var A = state.audio || {};
     var dance = state.params.musicDance || 0;
+    var beat = A.beat || 0;
     for (var i = 0; i < state.blobs.length; i++) {
         var b = state.blobs[i];
         var rr = b.r;
         // Music swell: each blob breathes with the energy of its own band
         // — render-only (physics keeps the true r, so merging and splitting
         // are untouched). The slow sine makes it pump instead of just
-        // sitting swollen while its band sings.
+        // sitting swollen while its band sings; the beat envelope pops the
+        // whole lamp on every transient.
         if (dance > 0 && A.bands && A.bands.length > b.band) {
             var e = A.bands[b.band];
             if (e > 0.01) {
                 var rate = 2.5 + b.band * 1.7;
                 var breathe = e * dance * (0.5 + 0.5 * Math.sin(state.time * rate * 0.6 + b.phase)) * 0.8;
-                rr = b.r * (1 + breathe);
+                rr = b.r * (1 + breathe + beat * 0.3);
             }
+        } else {
+            rr = b.r * (1 + beat * 0.3);
         }
         data[i * 4] = b.x;
         data[i * 4 + 1] = b.y;
         data[i * 4 + 2] = rr;
-        data[i * 4 + 3] = clamp(b.heat + (b.pulse || 0), 0, 1);
+        data[i * 4 + 3] = clamp(b.heat + (b.pulse || 0) + beat * 0.45, 0, 1);
     }
     return data;
 }
@@ -374,13 +379,28 @@ function beatKick(state, strength) {
     var p = state.params;
     var s = clamp(strength, 0, 0.5) * p.musicReactivity;
     if (s <= 0) return;
+    var A = state.audio;
+    // Envelope for the whole-lamp beat response (swell + flash): peaks on
+    // every transient, substep decays it fast so each kick is one pop.
+    A.beat = Math.max(A.beat || 0, Math.min(1, s * 2));
+    var bands = A.bands;
     var blobs = state.blobs;
     for (var i = 0; i < blobs.length; i++) {
         var b = blobs[i];
         var near = Math.max(0, 1 - Math.abs(1 - b.y) / (p.heaterZone * 3));
-        if (near <= 0) continue;
-        b.vy -= s * near * 0.5;
-        b.heat = clamp(b.heat + s * near * 0.15, 0, 1);
+        if (near > 0) {
+            b.vy -= s * near * 0.5;
+            b.heat = clamp(b.heat + s * near * 0.15, 0, 1);
+        }
+        // Disco pop: the whole lamp jumps on the kick, not just the pooled
+        // wax — blobs riding hot bands leap highest, everything gets a
+        // sideways shove and flashes its glow (via b.pulse, so the flash
+        // decays with the music glow).
+        var e = bands && bands.length > b.band ? bands[b.band] : 0.5;
+        b.vy -= s * (0.2 + 0.8 * e) * 1.2;
+        b.vx += (Math.random() - 0.5) * s * 1.5;
+        var flash = s * (0.6 + e);
+        if (flash > (b.pulse || 0)) b.pulse = flash;
     }
 }
 
