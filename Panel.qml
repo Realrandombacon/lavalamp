@@ -758,6 +758,18 @@ Item {
             onReleased: root.save()
           }
 
+          PanelRow {
+            width: parent.width
+            label: "Blob dance"
+            hint: "How much each blob vibrates, sways and glows on its own frequency band."
+            detail: Math.round(root.current("musicDance", 0.35) * 100) + " %"
+            minimum: 0; maximum: 1; step: 0.05
+            value: root.current("musicDance", 0.35)
+            enabled: root.current("musicEnabled", true)
+            onMoved: function(v) { root.apply({ musicDance: v }) }
+            onReleased: root.save()
+          }
+
           Dropdown {
             id: modeDropdown
             width: parent.width
@@ -848,7 +860,8 @@ Item {
                            hue: 0.0, glow: 1.0, sat: 1.0,
                            bgHueTop: 0.0, bgHueBottom: 0.0,
                            accentHue: 0.0, accentSat: 1.0,
-                           musicEnabled: true, musicReactivity: 0.5, musicMode: "full",
+                           musicEnabled: true, musicReactivity: 0.5,
+                           musicDance: 0.35, musicMode: "full",
                            lampEnabled: true })
               root.save()
             }

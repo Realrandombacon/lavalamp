@@ -119,5 +119,46 @@ function kickRun(reactivity) {
 check(kickRun(1) < 0, "beatKick did not shove the wax upward");
 check(kickRun(0) === 0, "musicReactivity 0 did not mute beatKick");
 
+// ---- 9. blob dance: per-band vibration, mute with dance=0 ----------------
+const dancers = Physics.createState({ blobCount: 1, musicDance: 1.0, jitter: 0 });
+const solo = { x: 0.5 * 16 / 9, y: 0.5, vx: 0, vy: 0, r: 0.08,
+               heat: 0.5, mergeCd: 999, splitCd: 999,
+               band: 3, phase: 0, pulse: 0 };
+dancers.blobs = [{ ...solo }];
+const bands = new Array(Physics.AUDIO_BANDS).fill(0);
+bands[3] = 1.0;   // only the blob's own band sings
+Physics.setAudio(dancers, 0.5, 0.5, bands);
+let moved = 0;
+for (let i = 0; i < 60; i++) {
+  Physics.step(dancers, 1 / 60, 16 / 9);
+  moved += Math.abs(dancers.blobs[0].vx);
+}
+check(moved > 0.01, "band energy did not make the blob dance");
+check(dancers.blobs[0].pulse > 0, "band energy did not pulse the blob glow");
+// a blob on a silent band must not dance
+const quiet = Physics.createState({ blobCount: 1, musicDance: 1.0, jitter: 0 });
+quiet.blobs = [{ ...solo, vx: 0, vy: 0, band: 6, phase: 0, pulse: 0 }];
+Physics.setAudio(quiet, 0.5, 0.5, bands);
+let movedQuiet = 0;
+for (let i = 0; i < 60; i++) {
+  Physics.step(quiet, 1 / 60, 16 / 9);
+  movedQuiet += Math.abs(quiet.blobs[0].vx);
+}
+check(movedQuiet === 0, "silent band made the blob move anyway");
+// dance=0 mutes everything, pulse decays back to rest
+const still = Physics.createState({ blobCount: 1, musicDance: 0, jitter: 0 });
+still.blobs = [{ ...solo, vx: 0, vy: 0, band: 3, phase: 0, pulse: 0.5 }];
+Physics.setAudio(still, 0.5, 0.5, bands);
+for (let i = 0; i < 120; i++) Physics.step(still, 1 / 60, 16 / 9);
+check(still.blobs[0].vx === 0, "musicDance 0 did not mute the vibration");
+check(still.blobs[0].pulse <= 0, "glow pulse did not decay back to rest");
+// the dance must never break the sim invariants
+for (let i = 0; i < 600; i++) {
+  Physics.step(dancers, 1 / 60, 16 / 9);
+  const b = dancers.blobs[0];
+  check(isFinite(b.x + b.y + b.vx + b.vy + b.heat), "dance: NaN blob");
+  check(b.x >= 0 && b.x <= 1 && b.y >= 0 && b.y <= 1, "dance: blob escaped");
+}
+
 if (failures) { console.error(`\n${failures} FAILURE(S)`); process.exit(1); }
 console.log("\nALL OK");

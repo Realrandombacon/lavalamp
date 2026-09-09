@@ -42,6 +42,7 @@ Item {
   property bool cavaAvailable: false
   property real audioBass: 0          // smoothed low-band energy, 0..1
   property real audioLevel: 0         // smoothed overall loudness, 0..1
+  property var audioBands: []         // smoothed per-band energies, 0..1
   property real bassEma: 0            // slow bass baseline (beat detection)
   property real beatLast: 0           // transient cooldown, seconds
   // Pointer play: last cursor position in shader space + whether the cursor
@@ -78,7 +79,8 @@ Item {
                               bgHueTop: 0.0, bgHueBottom: 0.0,
                               accentHue: 0.0, accentSat: 1.0,
                               buoyancy: 0.55, drag: 1.6, repulsion: 4.5,
-                              musicEnabled: true, musicReactivity: 0.5, musicMode: "full",
+                              musicEnabled: true, musicReactivity: 0.5,
+                              musicDance: 0.35, musicMode: "full",
                               lampEnabled: true })
 
   function applyLampConfig(cfg) {
@@ -109,6 +111,7 @@ Item {
       ecoPause: c.ecoPause !== false && c.ecoPause !== 0,
       musicEnabled: c.musicEnabled !== false && c.musicEnabled !== 0,
       musicReactivity: Physics.clamp(c.musicReactivity === 0 ? 0 : (Number(c.musicReactivity) || 0.5), 0, 1),
+      musicDance: Physics.clamp(c.musicDance === 0 ? 0 : (Number(c.musicDance) || 0.35), 0, 1),
       musicMode: ["glow", "wax", "full"].indexOf(c.musicMode) >= 0 ? c.musicMode : "full",
       lampEnabled: c.lampEnabled !== false && c.lampEnabled !== 0
     }
@@ -346,7 +349,8 @@ Item {
       root.lastFrameTime = now
       Physics.setAudio(root.simState,
                        root.musicMode !== "glow" ? root.audioBass : 0,
-                       root.audioLevel)
+                       root.audioLevel,
+                       root.musicMode !== "glow" ? root.audioBands : [])
       Physics.setPointer(root.simState, root.pointerNX, root.pointerNY, root.pointerActive)
       Physics.step(root.simState, dt * root.simTimeScale, root.simAspect)
       root.refreshBlobUniforms()
@@ -388,6 +392,7 @@ Item {
     audioBass = 0
     audioLevel = 0
     bassEma = 0
+    audioBands = []
   }
 
   // One cava frame: "<v0> <v1> ... <v7>" with values 0..100, low bands
@@ -397,9 +402,11 @@ Item {
     var parts = String(line).trim().split(/\s+/)
     if (parts.length < 3) return
     var bass = 0, level = 0, n = parts.length
+    var raw = []
     for (var i = 0; i < n; i++) {
       var v = Number(parts[i])
       if (!isFinite(v)) v = 0
+      raw.push(v / 100)
       if (i < 3) bass += v
       level += v
     }
@@ -407,6 +414,12 @@ Item {
     level = level / (n * 100)
     audioBass = bass > audioBass ? bass : audioBass * 0.82 + bass * 0.18
     audioLevel = level > audioLevel ? level : audioLevel * 0.90 + level * 0.10
+    var bands = []
+    for (i = 0; i < raw.length; i++) {
+      var prev = audioBands[i] !== undefined ? audioBands[i] : 0
+      bands.push(raw[i] > prev ? raw[i] : prev * 0.85 + raw[i] * 0.15)
+    }
+    audioBands = bands
     bassEma = bassEma * 0.97 + bass * 0.03
     var now = Date.now() / 1000
     if (bass > bassEma + 0.12 && bass > 0.15 && now - beatLast > 0.15) {

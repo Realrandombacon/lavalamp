@@ -24,6 +24,10 @@
 
 var MAX_BLOBS = 32;
 
+// Frequency bands streamed by the audio analysis (cava config ships with
+// the plugin and must keep bars = 8 in sync with this).
+var AUDIO_BANDS = 8;
+
 // Fixed liquid-dynamics timings (seconds), not user-facing.
 var MERGE_COOLDOWN = 1.6;
 var SPLIT_COOLDOWN = 3.0;
@@ -47,7 +51,8 @@ var DEFAULTS = {
     mergeSpeed: 0.35,     // max relative speed for blobs to count as sticky
     splitSpeed: 0.16,     // a blob above target count moving faster than
                           // this (vertically) may pinch off into two
-    musicReactivity: 0.5  // how hard the music drives the lamp (0 = off)
+    musicReactivity: 0.5, // how hard the music drives the lamp (0 = off)
+    musicDance: 0.35      // per-blob vibration/glow on their own bands (0 = off)
 };
 
 function createState(config) {
@@ -57,7 +62,7 @@ function createState(config) {
     for (var i = 0; i < p.blobCount; i++) blobs.push(spawnBlob(p, rng));
     return { params: p, blobs: blobs, time: 0,
              pointer: { nx: 0.5, ny: 0.5, x: 0.5 * 16 / 9, y: 0.5, s: 0, target: 0 },
-             audio: { bass: 0, level: 0, beat: 0 } };
+             audio: { bass: 0, level: 0, beat: 0, bands: [] } };
 }
 
 function spawnBlob(p, rng) {
@@ -70,7 +75,10 @@ function spawnBlob(p, rng) {
         r: r,
         heat: 0.35 + 0.2 * rng(),   // slightly warm: they start rising soon
         mergeCd: 0,                 // pooled newborns may fuse right away
-        splitCd: SPLIT_COOLDOWN
+        splitCd: SPLIT_COOLDOWN,
+        band: Math.floor(rng() * AUDIO_BANDS),  // its own frequency to dance on
+        phase: rng() * 6.283,                   // desync the sways
+        pulse: 0                                // music glow, decays fast
     };
 }
 
@@ -111,6 +119,7 @@ function substep(state, dt, aspect, p) {
     // the lamp's dial (0 reactivity or silence leaves heat untouched).
     var A = state.audio;
     var heat = p.heatPower * (1 + A.bass * A.bass * p.musicReactivity * 2.0);
+    var dance = p.musicDance;
 
     // Cursor presence eases in/out over ~0.2 s so entering or leaving the
     // screen never snaps the wax around; nx (shader space) is rescaled into
@@ -158,6 +167,26 @@ function substep(state, dt, aspect, p) {
                 b.heat = clamp(b.heat + p.touch * 0.3 * infl * dt, 0, 1);
             }
         }
+
+        // Music dance: each blob vibrates, sways and glows on its own
+        // frequency band. The band's energy gates a sway whose rate rises
+        // with the band index (higher frequencies flicker faster) plus a
+        // pinch of white-noise vibration; the glow (pulse) is applied on
+        // top of the heat in packUniforms and decays quickly, so the wax
+        // flickers with the music instead of sticking hot.
+        if (dance > 0 && A.bands && A.bands.length > b.band) {
+            var e = A.bands[b.band];
+            if (e > 0.01) {
+                var rate = 2.5 + b.band * 1.7;
+                var amp = dance * e * dt;
+                b.vx += Math.sin(state.time * rate + b.phase) * amp * 1.4
+                      + (Math.random() - 0.5) * amp * 0.9;
+                b.vy += Math.cos(state.time * rate * 0.83 + b.phase) * amp * 0.5;
+                var glow = e * dance * dt * 3.0;
+                if (glow > b.pulse) b.pulse = glow;
+            }
+        }
+        if (b.pulse > 0) b.pulse -= dt * 1.8;
 
         if (b.mergeCd > 0) b.mergeCd -= dt;
         if (b.splitCd > 0) b.splitCd -= dt;
@@ -259,7 +288,7 @@ function packUniforms(state) {
         data[i * 4] = b.x;
         data[i * 4 + 1] = b.y;
         data[i * 4 + 2] = b.r;
-        data[i * 4 + 3] = b.heat;
+        data[i * 4 + 3] = clamp(b.heat + (b.pulse || 0), 0, 1);
     }
     return data;
 }
@@ -303,12 +332,19 @@ function poke(state, nx, ny, aspect) {
 // ------------------------------------------------------- music reactivity
 
 // Feed the smoothed analysis values (both 0..1): bass = low-band energy,
-// level = overall loudness. Called per frame by the shell; the values ease
-// in the physics through the heater term above and beatKick impulses below.
-function setAudio(state, bass, level) {
+// level = overall loudness, bands = per-band energies (array of AUDIO_BANDS
+// 0..1 values, low frequencies first). Called per frame by the shell; bass
+// drives the heater above, bands drive the per-blob dance, and beatKick
+// impulses land on transients.
+function setAudio(state, bass, level, bands) {
     var A = state.audio;
     A.bass = clamp(Number(bass) || 0, 0, 1);
     A.level = clamp(Number(level) || 0, 0, 1);
+    if (bands && bands.length) {
+        A.bands = [];
+        for (var i = 0; i < bands.length && i < AUDIO_BANDS; i++)
+            A.bands.push(clamp(Number(bands[i]) || 0, 0, 1));
+    }
 }
 
 // One-shot on a detected transient: a pulse of heat and an upward shove to
@@ -348,6 +384,10 @@ function coalesce(a, c) {
     a.vy = (a.vy * ma + c.vy * mc) / m;
     a.heat = (a.heat * ma + c.heat * mc) / m;
     a.r = Math.pow(m, 1 / 3);
+    // The fused blob is bigger, so it reads as bassier: keep the lower of
+    // the two bands; the glow pulse passes through as the stronger one.
+    a.band = Math.min(a.band, c.band);
+    a.pulse = Math.max(a.pulse || 0, c.pulse || 0);
     a.mergeCd = MERGE_COOLDOWN;
     a.splitCd = SPLIT_COOLDOWN;
     return a;
@@ -382,14 +422,18 @@ function trySplit(state, dt, p) {
         y: clamp(best.y - dir * sep / 2, r1, 1 - r1),
         vx: best.vx - 0.04, vy: best.vy, r: r1,
         heat: clamp(heat + 0.10, 0, 1),     // the trailing core stays hot
-        mergeCd: MERGE_COOLDOWN, splitCd: SPLIT_COOLDOWN
+        mergeCd: MERGE_COOLDOWN, splitCd: SPLIT_COOLDOWN,
+        band: best.band, phase: best.phase, pulse: best.pulse
     };
     var b2 = {
         x: clamp(best.x, r2, 1 - r2),
         y: clamp(best.y + dir * sep / 2, r2, 1 - r2),
         vx: best.vx + 0.04, vy: best.vy, r: r2,
         heat: clamp(heat - 0.10, 0, 1),
-        mergeCd: MERGE_COOLDOWN, splitCd: SPLIT_COOLDOWN
+        mergeCd: MERGE_COOLDOWN, splitCd: SPLIT_COOLDOWN,
+        // The tear lands on a neighboring band so splits widen the dance.
+        band: (best.band + 1 + Math.floor(Math.random() * 2)) % AUDIO_BANDS,
+        phase: Math.random() * 6.283, pulse: best.pulse
     };
 
     // Replace the parent with its two children in place.
@@ -426,7 +470,8 @@ function seededRandom(seed) {
 // Headless testing under node (a no-op inside QML, where `module` is
 // undefined and the file is imported as a QML JS library).
 if (typeof module !== "undefined" && module.exports)
-    module.exports = { MAX_BLOBS: MAX_BLOBS, DEFAULTS: DEFAULTS,
+    module.exports = { MAX_BLOBS: MAX_BLOBS, AUDIO_BANDS: AUDIO_BANDS,
+                       DEFAULTS: DEFAULTS,
                        createState: createState, applyConfig: applyConfig,
                        step: step, packUniforms: packUniforms,
                        setPointer: setPointer, poke: poke,

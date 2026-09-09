@@ -18,6 +18,7 @@
   "accentSat": 1.0,
   "musicEnabled": true,
   "musicReactivity": 0.5,
+  "musicDance": 0.35,
   "musicMode": "full",
   "lampEnabled": true
 }
