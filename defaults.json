@@ -16,5 +16,8 @@
   "bgHueBottom": 0.0,
   "accentHue": 0.0,
   "accentSat": 1.0,
+  "musicEnabled": true,
+  "musicReactivity": 0.5,
+  "musicMode": "full",
   "lampEnabled": true
 }

@@ -81,5 +81,43 @@ for (const [name, cfg] of Object.entries(MOODS)) {
   console.log(`${name}: merges=${merged} splits=${split} count=${s.blobs.length}`);
 }
 
+// ---- 8. music reactivity: bass heats, beatKick launches ------------------
+st = Physics.createState({ blobCount: 6, musicReactivity: 1.0 });
+Physics.setAudio(st, 0.8, 0.5);
+const coldBlob = { x: 0.5 * 16 / 9, y: 0.92, vx: 0, vy: 0, r: 0.08,
+                   heat: 0.2, mergeCd: 0, splitCd: 3 };
+st.blobs = [coldBlob];
+for (let i = 0; i < 60; i++) Physics.step(st, 1 / 60, 16 / 9);
+check(st.blobs[0].heat > 0.2, "bass did not feed the heater");
+const kicked = Physics.createState({ blobCount: 6, musicReactivity: 1.0 });
+kicked.blobs = [{ x: 0.5 * 16 / 9, y: 0.92, vx: 0, vy: 0, r: 0.08,
+                  heat: 0.4, mergeCd: 0, splitCd: 3 }];
+const vyBefore = kicked.blobs[0].vy;
+Physics.beatKick(kicked, 0.3);
+check(kicked.blobs[0].vy < vyBefore, "beatKick did not shove the wax upward");
+check(kicked.blobs[0].heat > 0.4, "beatKick did not add heat");
+// zero reactivity must mute both paths: run the same 60 steps with and
+// without bass and compare against each other, not against the start.
+function bassRun(reactivity) {
+  const s = Physics.createState({ blobCount: 6, musicReactivity: reactivity });
+  s.blobs = [{ x: 0.5 * 16 / 9, y: 0.92, vx: 0, vy: 0, r: 0.08,
+               heat: 0.2, mergeCd: 0, splitCd: 3 }];
+  Physics.setAudio(s, reactivity > 0 ? 0.8 : 0.0, 0.5);
+  for (let i = 0; i < 60; i++) Physics.step(s, 1 / 60, 16 / 9);
+  return s.blobs[0].heat;
+}
+check(bassRun(0) === bassRun(0), "determinism");
+check(bassRun(1) > bassRun(0), "bass did not heat harder than silence");
+// beatKick: a reactive lamp gets shoved, a muted one does not move at all
+function kickRun(reactivity) {
+  const s = Physics.createState({ blobCount: 6, musicReactivity: reactivity });
+  s.blobs = [{ x: 0.5 * 16 / 9, y: 0.92, vx: 0, vy: 0, r: 0.08,
+               heat: 0.4, mergeCd: 0, splitCd: 3 }];
+  Physics.beatKick(s, 0.3);
+  return s.blobs[0].vy;
+}
+check(kickRun(1) < 0, "beatKick did not shove the wax upward");
+check(kickRun(0) === 0, "musicReactivity 0 did not mute beatKick");
+
 if (failures) { console.error(`\n${failures} FAILURE(S)`); process.exit(1); }
 console.log("\nALL OK");

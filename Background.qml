@@ -32,6 +32,18 @@ Item {
   // Master toggle: false shows the real current Omarchy theme background
   // (currentBackground, tracked below) instead of the live simulation.
   property bool lampEnabled: true
+  // Music reactivity. cava (tapped on the PipeWire monitor of the default
+  // sink) streams one line of space-separated band values per frame; bass
+  // drives the heater + beat kicks, level pulses the shader glow. The
+  // lamp degrades gracefully when cava is not installed: the toggle in
+  // the panel grays out and the lamp stays fully functional.
+  property bool musicEnabled: false
+  property string musicMode: "full"   // glow | wax | full
+  property bool cavaAvailable: false
+  property real audioBass: 0          // smoothed low-band energy, 0..1
+  property real audioLevel: 0         // smoothed overall loudness, 0..1
+  property real bassEma: 0            // slow bass baseline (beat detection)
+  property real beatLast: 0           // transient cooldown, seconds
   // Pointer play: last cursor position in shader space + whether the cursor
   // is over a background window. Fed into the sim each tick; the strength
   // easing lives in Physics.substep.
@@ -66,6 +78,7 @@ Item {
                               bgHueTop: 0.0, bgHueBottom: 0.0,
                               accentHue: 0.0, accentSat: 1.0,
                               buoyancy: 0.55, drag: 1.6, repulsion: 4.5,
+                              musicEnabled: true, musicReactivity: 0.5, musicMode: "full",
                               lampEnabled: true })
 
   function applyLampConfig(cfg) {
@@ -94,6 +107,9 @@ Item {
       drag: Physics.clamp(Number(c.drag) || 1.6, 0.3, 4),
       repulsion: Physics.clamp(Number(c.repulsion) || 4.5, 1, 10),
       ecoPause: c.ecoPause !== false && c.ecoPause !== 0,
+      musicEnabled: c.musicEnabled !== false && c.musicEnabled !== 0,
+      musicReactivity: Physics.clamp(c.musicReactivity === 0 ? 0 : (Number(c.musicReactivity) || 0.5), 0, 1),
+      musicMode: ["glow", "wax", "full"].indexOf(c.musicMode) >= 0 ? c.musicMode : "full",
       lampEnabled: c.lampEnabled !== false && c.lampEnabled !== 0
     }
     var accentChanged = next.accentHue !== lampConfig.accentHue || next.accentSat !== lampConfig.accentSat
@@ -106,6 +122,9 @@ Item {
     lampBgHueTop = next.bgHueTop
     lampBgHueBottom = next.bgHueBottom
     lampEnabled = next.lampEnabled
+    musicEnabled = next.musicEnabled
+    musicMode = next.musicMode
+    updateAudioEngine()
     if (accentChanged) {
       lampAccentHue = next.accentHue
       lampAccentSat = next.accentSat
@@ -325,6 +344,9 @@ Item {
       var now = Date.now() / 1000
       var dt = root.lastFrameTime > 0 ? Math.min(now - root.lastFrameTime, 1 / 10) : 1 / 30
       root.lastFrameTime = now
+      Physics.setAudio(root.simState,
+                       root.musicMode !== "glow" ? root.audioBass : 0,
+                       root.audioLevel)
       Physics.setPointer(root.simState, root.pointerNX, root.pointerNY, root.pointerActive)
       Physics.step(root.simState, dt * root.simTimeScale, root.simAspect)
       root.refreshBlobUniforms()
@@ -346,10 +368,92 @@ Item {
       onStreamFinished: root.updateEco(text)
     }
   }
+  // ---- Music reactivity engine. One cava process, started lazily and
+  //      only when the feature is on and the binary exists; its stdout is
+  //      parsed per line (raw + ascii output mode — see lavalamp-cava.conf).
+  readonly property string cavaConfPath: decodeURIComponent(
+    String(Qt.resolvedUrl("lavalamp-cava.conf")).replace(/^file:\/\//, ""))
+
+  function updateAudioEngine() {
+    var want = musicEnabled && cavaAvailable && lampEnabled
+    if (want && !cavaProc.running) {
+      resetAudio()
+      cavaProc.running = true
+    } else if (!want && cavaProc.running) {
+      cavaProc.running = false
+    }
+  }
+
+  function resetAudio() {
+    audioBass = 0
+    audioLevel = 0
+    bassEma = 0
+  }
+
+  // One cava frame: "<v0> <v1> ... <v7>" with values 0..100, low bands
+  // first. Smoothed fast-attack / slow-release so hits read while silence
+  // decays gently; a bass jump above its own slow average is a beat.
+  function parseAudio(line) {
+    var parts = String(line).trim().split(/\s+/)
+    if (parts.length < 3) return
+    var bass = 0, level = 0, n = parts.length
+    for (var i = 0; i < n; i++) {
+      var v = Number(parts[i])
+      if (!isFinite(v)) v = 0
+      if (i < 3) bass += v
+      level += v
+    }
+    bass = bass / 300
+    level = level / (n * 100)
+    audioBass = bass > audioBass ? bass : audioBass * 0.82 + bass * 0.18
+    audioLevel = level > audioLevel ? level : audioLevel * 0.90 + level * 0.10
+    bassEma = bassEma * 0.97 + bass * 0.03
+    var now = Date.now() / 1000
+    if (bass > bassEma + 0.12 && bass > 0.15 && now - beatLast > 0.15) {
+      beatLast = now
+      if (musicMode !== "glow")
+        Physics.beatKick(simState, 0.08 * (0.5 + bass))
+    }
+  }
+
+  Process {
+    id: cavaDetectProc
+    command: ["which", "cava"]
+    stdout: StdioCollector {
+      onStreamFinished: {
+        root.cavaAvailable = String(text).trim() !== ""
+        root.updateAudioEngine()
+      }
+    }
+  }
+
+  Process {
+    id: cavaProc
+    command: ["cava", "-p", root.cavaConfPath]
+    stdout: SplitParser {
+      onRead: function(line) { root.parseAudio(line) }
+    }
+    // A dead cava must not silently freeze the feature: restart it once
+    // after a pause. updateAudioEngine is a no-op when it exited because
+    // the user turned the feature off.
+    onExited: {
+      if (root.musicEnabled && root.cavaAvailable && root.lampEnabled)
+        cavaRestartTimer.restart()
+    }
+  }
+
+  Timer {
+    id: cavaRestartTimer
+    interval: 2000
+    repeat: false
+    onTriggered: root.updateAudioEngine()
+  }
+
   Component.onCompleted: {
     configDirProc.running = true
     root.refreshBlobUniforms()
     refreshBackground()
+    cavaDetectProc.running = true
   }
 
   readonly property string home: Quickshell.env("HOME")
@@ -593,6 +697,8 @@ Item {
         property real uSat: root.lampSat
         property real uBgHueTop: root.lampBgHueTop
         property real uBgHueBottom: root.lampBgHueBottom
+        property real uPulse: root.musicMode !== "wax"
+                              ? root.audioLevel * root.lampConfig.musicReactivity : 0
         property vector4d blob0: root.blobVec(0)
         property vector4d blob1: root.blobVec(1)
         property vector4d blob2: root.blobVec(2)

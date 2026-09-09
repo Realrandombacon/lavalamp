@@ -12,7 +12,8 @@ QSB=/usr/lib/qt6/bin/qsb
 # Exactly the files a plugin install ships; everything else (tests, theme,
 # docs, .git) stays in the dev checkout.
 FILES=(manifest.json Background.qml Panel.qml Physics.js BarWidget.qml
-       defaults.json lavalamp.frag lavalamp.frag.qsb preview.png)
+       defaults.json lavalamp.frag lavalamp.frag.qsb lavalamp-cava.conf
+       preview.png)
 
 mkdir -p "$DEST"
 

@@ -20,6 +20,7 @@ layout(std140, binding = 0) uniform buf {
                         // scale it to their accent's vividness)
     float uBgHueTop;    // -0.5..0.5 hue rotation of the background, top edge
     float uBgHueBottom; // -0.5..0.5 hue rotation of the background, bottom edge
+    float uPulse;       // 0..1 music loudness pulse (glow reactivity)
     vec4 blob0;   // x, y, radius, heat
     vec4 blob1;   // x, y, radius, heat
     vec4 blob2;   // x, y, radius, heat
@@ -129,7 +130,7 @@ void main() {
     float baseT = pow(uv.y, 2.2) * 0.9;   // brighter toward the bottom
     vec3 col = mix(vec3(0.030, 0.006, 0.003), vec3(0.16, 0.035, 0.008), baseT);
     float lampGlow = exp(-pow((uv.y - 1.06) * 3.2, 2.0));
-    col += vec3(0.55, 0.16, 0.02) * lampGlow * (0.35 + 0.2 * ubuf.uGlow);
+    col += vec3(0.55, 0.16, 0.02) * lampGlow * (0.35 + 0.2 * ubuf.uGlow + 0.35 * ubuf.uPulse);
 
     // Independent top/bottom hue rotation of the background only (the wax
     // has its own uHue). The shift amount itself is interpolated vertically,
@@ -150,9 +151,9 @@ void main() {
     col = mix(col, wax, body);
     col = mix(col, waxCore, body * core * core * 0.55);
 
-    // --- ambient halo around the wax (uGlow) ---
+    // --- ambient halo around the wax (uGlow), breathing with the music ---
     float halo = clamp((field - 0.25) * 0.5, 0.0, 1.0) * (1.0 - body);
-    col += wax * halo * 0.18 * ubuf.uGlow;
+    col += wax * halo * (0.18 * ubuf.uGlow + 0.22 * ubuf.uPulse);
 
     // Gentle vignette to keep corners deep like a lamp in a dark room.
     vec2 vc = uv - 0.5;

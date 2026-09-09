@@ -45,8 +45,9 @@ var DEFAULTS = {
     touch: 1.0,          // pointer interaction strength (0 = cursor ignored)
     mergeThreshold: 0.45, // centers closer than this fraction of r1+r2 -> fuse
     mergeSpeed: 0.35,     // max relative speed for blobs to count as sticky
-    splitSpeed: 0.16      // a blob above target count moving faster than
+    splitSpeed: 0.16,     // a blob above target count moving faster than
                           // this (vertically) may pinch off into two
+    musicReactivity: 0.5  // how hard the music drives the lamp (0 = off)
 };
 
 function createState(config) {
@@ -55,7 +56,8 @@ function createState(config) {
     var blobs = [];
     for (var i = 0; i < p.blobCount; i++) blobs.push(spawnBlob(p, rng));
     return { params: p, blobs: blobs, time: 0,
-             pointer: { nx: 0.5, ny: 0.5, x: 0.5 * 16 / 9, y: 0.5, s: 0, target: 0 } };
+             pointer: { nx: 0.5, ny: 0.5, x: 0.5 * 16 / 9, y: 0.5, s: 0, target: 0 },
+             audio: { bass: 0, level: 0, beat: 0 } };
 }
 
 function spawnBlob(p, rng) {
@@ -104,7 +106,11 @@ function step(state, dt, aspect) {
 function substep(state, dt, aspect, p) {
     var blobs = state.blobs;
     var n = blobs.length;
-    var heat = p.heatPower;
+    // Music: bass is the burner's flame. The heater scales up with the low
+    // bands, so kicks pump energy into the pooled wax exactly like turning
+    // the lamp's dial (0 reactivity or silence leaves heat untouched).
+    var A = state.audio;
+    var heat = p.heatPower * (1 + A.bass * A.bass * p.musicReactivity * 2.0);
 
     // Cursor presence eases in/out over ~0.2 s so entering or leaving the
     // screen never snaps the wax around; nx (shader space) is rescaled into
@@ -294,6 +300,35 @@ function poke(state, nx, ny, aspect) {
     }
 }
 
+// ------------------------------------------------------- music reactivity
+
+// Feed the smoothed analysis values (both 0..1): bass = low-band energy,
+// level = overall loudness. Called per frame by the shell; the values ease
+// in the physics through the heater term above and beatKick impulses below.
+function setAudio(state, bass, level) {
+    var A = state.audio;
+    A.bass = clamp(Number(bass) || 0, 0, 1);
+    A.level = clamp(Number(level) || 0, 0, 1);
+}
+
+// One-shot on a detected transient: a pulse of heat and an upward shove to
+// the wax pooled at the bottom, so the beat visibly launches blobs. The
+// impulse is proportional to strength (already scaled by the user's
+// reactivity on the shell side) and fades with distance from the heater.
+function beatKick(state, strength) {
+    var p = state.params;
+    var s = clamp(strength, 0, 0.5) * p.musicReactivity;
+    if (s <= 0) return;
+    var blobs = state.blobs;
+    for (var i = 0; i < blobs.length; i++) {
+        var b = blobs[i];
+        var near = Math.max(0, 1 - Math.abs(1 - b.y) / (p.heaterZone * 3));
+        if (near <= 0) continue;
+        b.vy -= s * near * 0.5;
+        b.heat = clamp(b.heat + s * near * 0.15, 0, 1);
+    }
+}
+
 // ------------------------------------------------------- liquid dynamics
 
 // Relative speed of two blobs, in aspect-corrected units per second.
@@ -395,4 +430,5 @@ if (typeof module !== "undefined" && module.exports)
                        createState: createState, applyConfig: applyConfig,
                        step: step, packUniforms: packUniforms,
                        setPointer: setPointer, poke: poke,
+                       setAudio: setAudio, beatKick: beatKick,
                        clamp: clamp };

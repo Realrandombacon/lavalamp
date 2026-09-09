@@ -715,6 +715,105 @@ Item {
 
         PanelSeparator {}
 
+        // ---- Music reactivity. The analysis binary (cava) is optional:
+        //      when it is missing the whole section grays out but the
+        //      lamp stays fully functional without it.
+        Column {
+          width: parent.width
+          spacing: Style.space(10)
+
+          Text {
+            text: "MUSIC"
+            color: Qt.darker(Color.popups.text, 1.6)
+            font.family: Style.font.family
+            font.pixelSize: Style.font.caption
+            font.letterSpacing: 1
+            font.bold: true
+          }
+
+          Toggle {
+            width: parent.width
+            label: "Music reactive"
+            description: root.service && root.service.cavaAvailable
+              ? "The wax dances to whatever plays on your system."
+              : "Requires cava: install it (pacman -S cava), then reopen the panel."
+            checked: root.current("musicEnabled", true)
+            enabled: root.service && root.service.cavaAvailable
+            opacity: root.service && root.service.cavaAvailable ? 1 : 0.5
+            onClicked: {
+              root.apply({ musicEnabled: !root.current("musicEnabled", true) })
+              root.save()
+            }
+          }
+
+          PanelRow {
+            width: parent.width
+            label: "Reactivity"
+            hint: "How hard the music drives the lamp: glow pulse, heater strength and beat kicks."
+            detail: Math.round(root.current("musicReactivity", 0.5) * 100) + " %"
+            minimum: 0; maximum: 1; step: 0.05
+            value: root.current("musicReactivity", 0.5)
+            enabled: root.current("musicEnabled", true)
+            onMoved: function(v) { root.apply({ musicReactivity: v }) }
+            onReleased: root.save()
+          }
+
+          Dropdown {
+            id: modeDropdown
+            width: parent.width
+            label: "Mode"
+            value: root.current("musicMode", "full")
+            options: [
+              { label: "Full (glow + wax)", value: "full" },
+              { label: "Glow only", value: "glow" },
+              { label: "Wax only", value: "wax" }
+            ]
+            enabled: root.current("musicEnabled", true)
+            opacity: root.current("musicEnabled", true) ? 1 : 0.4
+            onChanged: function(v) {
+              root.apply({ musicMode: v })
+              root.save()
+            }
+          }
+        }
+
+        PanelSeparator {}
+
+        // ---- Marketplace link (hearts are recorded by the site itself —
+        //      the engagement API only accepts the site's origins, so a
+        //      like from inside the plugin has to hop through the browser).
+        Item {
+          width: parent.width
+          height: heartText.implicitHeight + Style.space(12)
+
+          Rectangle {
+            anchors.fill: parent
+            radius: Style.cornerRadius
+            color: heartMouse.containsMouse ? Style.hoverFillFor(Color.popups.text, Color.accent) : "transparent"
+          }
+
+          Text {
+            id: heartText
+            anchors.centerIn: parent
+            text: "♥ Heart Lava Lamp on the Omarchy marketplace"
+            color: heartMouse.containsMouse ? Color.accent : Color.popups.text
+            font.family: Style.font.family
+            font.pixelSize: Style.font.body
+          }
+
+          MouseArea {
+            id: heartMouse
+            anchors.fill: parent
+            hoverEnabled: true
+            cursorShape: Qt.PointingHandCursor
+            onClicked: {
+              var id = (root.manifest && root.manifest.id) || "io.github.realrandombacon.lavalamp"
+              Quickshell.execDetached(["xdg-open", "https://plugins.omarchy.org/plugin.html?id=" + id])
+              root.dismiss()
+            }
+          }
+        }
+
         // ---- Defaults
         Item {
           width: parent.width
@@ -749,6 +848,7 @@ Item {
                            hue: 0.0, glow: 1.0, sat: 1.0,
                            bgHueTop: 0.0, bgHueBottom: 0.0,
                            accentHue: 0.0, accentSat: 1.0,
+                           musicEnabled: true, musicReactivity: 0.5, musicMode: "full",
                            lampEnabled: true })
               root.save()
             }

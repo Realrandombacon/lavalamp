@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.3.0 — 2026-09-09
+
+- Music reactivity: the lamp dances to whatever plays on the system.
+  cava (optional dependency, `pacman -S cava`) taps the PipeWire monitor
+  of the default sink and streams 8 smoothed frequency bands; bass is the
+  burner's flame (kicks pump heat into the pooled wax and launch blobs on
+  transients), loudness pulses the glow halo. Music section in the panel:
+  toggle, reactivity slider and a mode dropdown (Full / Glow only /
+  Wax only). Without cava the section grays out and the lamp stays
+  fully functional.
+- "Heart Lava Lamp on the Omarchy marketplace" link at the bottom of the
+  panel: opens the plugin's page in the browser so installed users can
+  add a heart (the engagement API only accepts the site's origins, so
+  the like has to happen on the page itself).
+
 ## 1.2.0 — 2026-09-06
 
 - Live/Theme toggle in the panel header: turn the lamp off to fall back to
