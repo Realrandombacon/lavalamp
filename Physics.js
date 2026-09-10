@@ -312,7 +312,7 @@ function packUniforms(state) {
         data[i * 4] = b.x;
         data[i * 4 + 1] = b.y;
         data[i * 4 + 2] = rr;
-        data[i * 4 + 3] = clamp(b.heat + (b.pulse || 0) + beat * 0.45, 0, 1);
+        data[i * 4 + 3] = clamp(b.heat + (b.pulse || 0) + beat * 0.22, 0, 1);
     }
     return data;
 }
@@ -399,7 +399,7 @@ function beatKick(state, strength) {
         var e = bands && bands.length > b.band ? bands[b.band] : 0.5;
         b.vy -= s * (0.2 + 0.8 * e) * 1.2;
         b.vx += (Math.random() - 0.5) * s * 1.5;
-        var flash = s * (0.6 + e);
+        var flash = s * (0.3 + 0.5 * e);
         if (flash > (b.pulse || 0)) b.pulse = flash;
     }
 }
