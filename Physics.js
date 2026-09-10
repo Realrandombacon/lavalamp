@@ -52,7 +52,7 @@ var DEFAULTS = {
     splitSpeed: 0.16,     // a blob above target count moving faster than
                           // this (vertically) may pinch off into two
     musicReactivity: 0.5, // how hard the music drives the lamp (0 = off)
-    musicDance: 0.35      // per-blob vibration/glow on their own bands (0 = off)
+    musicDance: 0.5       // per-blob vibration/glow on their own bands (0 = off)
 };
 
 function createState(config) {

@@ -762,9 +762,9 @@ Item {
             width: parent.width
             label: "Blob dance"
             hint: "How much each blob vibrates, sways and glows on its own frequency band."
-            detail: Math.round(root.current("musicDance", 0.35) * 100) + " %"
+            detail: Math.round(root.current("musicDance", 0.5) * 100) + " %"
             minimum: 0; maximum: 1; step: 0.05
-            value: root.current("musicDance", 0.35)
+            value: root.current("musicDance", 0.5)
             enabled: root.current("musicEnabled", true)
             onMoved: function(v) { root.apply({ musicDance: v }) }
             onReleased: root.save()
@@ -861,7 +861,7 @@ Item {
                            bgHueTop: 0.0, bgHueBottom: 0.0,
                            accentHue: 0.0, accentSat: 1.0,
                            musicEnabled: true, musicReactivity: 0.5,
-                           musicDance: 0.35, musicMode: "full",
+                           musicDance: 0.5, musicMode: "full",
                            lampEnabled: true })
               root.save()
             }

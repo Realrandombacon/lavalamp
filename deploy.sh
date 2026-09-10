@@ -32,7 +32,9 @@ done
 rm -f "$DEST/pulse.frag" "$DEST/pulse.frag.qsb"   # removed in 1.1.0
 omarchy-shell -q shell rescanPlugins || true
 # NOTE: inotify hot-reload is unreliable for shader (.qsb) changes — the shell
-# keeps serving the old binary. Pass --restart after editing a .frag file.
+# keeps serving the old binary. Pass --restart after editing a .frag file
+# — or a .qml file: the hot reload serves a stale qml compilation cache
+# (~/.cache/quickshell/qmlcache), so QML changes silently never run.
 if [[ "${1:-}" == "--restart" ]]; then
   omarchy restart shell
   echo "shell restarted"

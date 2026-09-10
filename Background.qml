@@ -80,7 +80,7 @@ Item {
                               accentHue: 0.0, accentSat: 1.0,
                               buoyancy: 0.55, drag: 1.6, repulsion: 4.5,
                               musicEnabled: true, musicReactivity: 0.5,
-                              musicDance: 0.35, musicMode: "full",
+                              musicDance: 0.5, musicMode: "full",
                               lampEnabled: true })
 
   function applyLampConfig(cfg) {
@@ -111,7 +111,7 @@ Item {
       ecoPause: c.ecoPause !== false && c.ecoPause !== 0,
       musicEnabled: c.musicEnabled !== false && c.musicEnabled !== 0,
       musicReactivity: Physics.clamp(c.musicReactivity === 0 ? 0 : (Number(c.musicReactivity) || 0.5), 0, 1),
-      musicDance: Physics.clamp(c.musicDance === 0 ? 0 : (Number(c.musicDance) || 0.35), 0, 1),
+      musicDance: Physics.clamp(c.musicDance === 0 ? 0 : (Number(c.musicDance) || 0.5), 0, 1),
       musicMode: ["glow", "wax", "full"].indexOf(c.musicMode) >= 0 ? c.musicMode : "full",
       lampEnabled: c.lampEnabled !== false && c.lampEnabled !== 0
     }
@@ -425,7 +425,7 @@ Item {
     if (bass > bassEma + 0.12 && bass > 0.15 && now - beatLast > 0.15) {
       beatLast = now
       if (musicMode !== "glow")
-        Physics.beatKick(simState, 0.08 * (0.5 + bass))
+        Physics.beatKick(simState, 0.22 * (0.5 + bass))
     }
   }
 
