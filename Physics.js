@@ -198,7 +198,7 @@ function substep(state, dt, aspect, p) {
                 // big and slow, high blobs flutter small and fast.
                 var amp = dance * e * rate * dt * 0.19;
                 b.vx += Math.sin(state.time * rate + b.phase) * amp
-                      + (Math.random() - 0.5) * amp * 0.35;
+                      + (Math.random() - 0.5) * amp * 0.15;
                 b.vy += Math.cos(state.time * rate * 0.83 + b.phase) * amp * 0.45;
                 // Glow eases toward its target (no spiky peaks) and decays.
                 var glow = e * dance * 0.4;
@@ -424,14 +424,15 @@ function beatKick(state, strength, loBand, hiBand) {
               : b.band > A.beatHi ? b.band - A.beatHi : 0;
         var w = 1 / (1 + d);
         var near = Math.max(0, 1 - Math.abs(1 - b.y) / (p.heaterZone * 3));
-        if (near > 0) {
-            b.vy -= s * near * 0.5 * w;
+        if (near > 0)
             b.heat = clamp(b.heat + s * near * 0.15 * w, 0, 1);
-        }
         // Disco pop, band-weighted: in-band blobs leap and flash hardest.
+        // Deterministic: the kick SETS the upward velocity instead of
+        // adding to it, so the same transient launches a blob the same
+        // way whether it was at rest, already rising, or falling.
         var e = Math.max(bands && bands.length > b.band ? bands[b.band] : 0.5, 0.4);
-        b.vy -= s * (0.2 + 0.8 * e) * 1.2 * w;
-        b.vx += (Math.random() - 0.5) * s * 1.5 * w;
+        var k = (s * (0.2 + 0.8 * e) * 1.2 + (near > 0 ? s * near * 0.5 : 0)) * w;
+        b.vy = -k;
         var flash = s * (0.4 + 0.6 * e) * w;
         if (flash > (b.pulse || 0)) b.pulse = flash;
     }

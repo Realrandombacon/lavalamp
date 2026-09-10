@@ -246,6 +246,23 @@ const snared = Physics.createState({ blobCount: 0, musicReactivity: 1.0, musicDa
 snared.blobs = [{ ...bigOne }, { ...smallOne }];
 Physics.beatKick(snared, 0.3, 2, 7);
 check(snared.blobs[1].pulse > snared.blobs[0].pulse * 2, "snare did not favor the treble blobs");
+// ---- 14. transient response is deterministic ----------------------------
+// The same kick from the same blob state must give the same reaction —
+// twice in a row, and regardless of what the blob was doing before.
+function kickProbe(vy0) {
+  const s = Physics.createState({ blobCount: 0, musicReactivity: 1.0, musicDance: 0 });
+  s.blobs = [{ x: 0.5 * 16 / 9, y: 0.5, vx: 0, vy: vy0, r: 0.08, heat: 0.2,
+               mergeCd: 999, splitCd: 999, band: 0, phase: 0, pulse: 0 }];
+  Physics.beatKick(s, 0.3, 0, 1);
+  const b = s.blobs[0];
+  return { vy: b.vy, heat: b.heat, pulse: b.pulse };
+}
+const a1 = kickProbe(0), a2 = kickProbe(0);
+check(a1.vy === a2.vy && a1.heat === a2.heat && a1.pulse === a2.pulse,
+      "same transient gave different reactions");
+const falling = kickProbe(0.5), rising = kickProbe(-0.5);
+check(falling.vy === a1.vy, "a falling blob kicked weaker than a resting one");
+check(rising.vy === a1.vy, "an already-rising blob kicked differently");
 // the dance must never break the sim invariants
 for (let i = 0; i < 600; i++) {
   Physics.step(dancers, 1 / 60, 16 / 9);

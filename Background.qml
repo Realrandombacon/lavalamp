@@ -479,8 +479,8 @@ Item {
     for (i = 2; i < raw.length; i++) high += raw[i]
     high = raw.length > 2 ? high / (raw.length - 2) : 0
     audioBass = low > audioBass ? low : audioBass * 0.82 + low * 0.18
-    bassEma = bassEma * 0.94 + low * 0.06
-    highEma = highEma * 0.90 + high * 0.10
+    bassEma = bassEma * 0.98 + low * 0.02
+    highEma = highEma * 0.97 + high * 0.03
     var now = Date.now() / 1000
     if (low > bassEma + 0.12 && low > 0.15 && now - beatLast > 0.05) {
       beatLast = now
