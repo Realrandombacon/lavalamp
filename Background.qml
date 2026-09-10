@@ -482,11 +482,11 @@ Item {
     bassEma = bassEma * 0.94 + low * 0.06
     highEma = highEma * 0.90 + high * 0.10
     var now = Date.now() / 1000
-    if (low > bassEma + 0.12 && low > 0.15 && now - beatLast > 0.18) {
+    if (low > bassEma + 0.12 && low > 0.15 && now - beatLast > 0.05) {
       beatLast = now
       if (musicMode !== "glow")
         Physics.beatKick(simState, 0.22 * (0.5 + low), 0, 1)
-    } else if (high > highEma + 0.09 && high > 0.2 && now - beatLast > 0.18) {
+    } else if (high > highEma + 0.09 && high > 0.2 && now - beatLast > 0.05) {
       beatLast = now
       if (musicMode !== "glow")
         Physics.beatKick(simState, 0.18 * (0.5 + high), 2, 7)
