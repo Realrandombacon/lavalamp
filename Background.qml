@@ -45,7 +45,8 @@ Item {
   property var audioBands: []         // smoothed per-band energies, 0..1
   property real bassEma: 0            // slow low-band baseline (kick detection)
   property real highEma: 0            // slow mid/high baseline (snare detection)
-  property real beatLast: 0           // transient cooldown, seconds
+  property real kickLast: 0           // kick cooldown, seconds
+  property real snareLast: 0          // snare cooldown, seconds
   // Pointer play: last cursor position in shader space + whether the cursor
   // is over a background window. Fed into the sim each tick; the strength
   // easing lives in Physics.substep.
@@ -388,9 +389,9 @@ Item {
   property int cavaBarsCurrent: -1      // bars value currently in the conf file
 
   function cavaConfTemplate(bars) {
-    return "[general]\nbars = " + bars + "\nframerate = 30\nautosens = 0\n"
+    return "[general]\nbars = " + bars + "\nframerate = 60\nautosens = 0\n"
          + "[input]\nmethod = pipewire\n"
-         + "[smoothing]\nnoise_reduction = 35\nmonstercat = 1.5\n"
+         + "[smoothing]\nnoise_reduction = 25\nmonstercat = 1.5\n"
          + "[output]\nmethod = raw\ndata_format = ascii\nascii_max_range = 100\n"
          + "bar_delimiter = 32\nframe_delimiter = 10\n"
   }
@@ -441,6 +442,8 @@ Item {
     audioLevel = 0
     bassEma = 0
     highEma = 0
+    kickLast = 0
+    snareLast = 0
     audioBands = []
   }
 
@@ -482,8 +485,11 @@ Item {
     bassEma = bassEma * 0.98 + low * 0.02
     highEma = highEma * 0.97 + high * 0.03
     var now = Date.now() / 1000
-    if (low > bassEma + 0.08 && low > 0.09 && now - beatLast > 0.05) {
-      beatLast = now
+    // Separate cooldowns: in a single drum hit the transient click (highs)
+    // crosses the snare threshold a frame or two before the sub-bass peak
+    // arrives; a shared cooldown swallowed every second kick.
+    if (low > bassEma + 0.08 && low > 0.09 && now - kickLast > 0.05) {
+      kickLast = now
       if (musicMode !== "glow") {
         // Quantize the strength: two marginal threshold crossings with
         // slightly different bar values then fire the identical kick
@@ -492,8 +498,9 @@ Item {
         console.warn("lava kick low=" + low.toFixed(2) + " ema=" + bassEma.toFixed(2))
         Physics.beatKick(simState, Math.round(kick / 0.05) * 0.05, 0, 1)
       }
-    } else if (high > highEma + 0.09 && high > 0.2 && now - beatLast > 0.05) {
-      beatLast = now
+    }
+    if (high > highEma + 0.09 && high > 0.2 && now - snareLast > 0.05) {
+      snareLast = now
       if (musicMode !== "glow") {
         var snap = 0.18 * (0.5 + high)
         Physics.beatKick(simState, Math.round(snap / 0.05) * 0.05, 2, 7)
