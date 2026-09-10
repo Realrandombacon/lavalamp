@@ -498,6 +498,10 @@ Item {
         console.warn("lava kick low=" + low.toFixed(2) + " ema=" + bassEma.toFixed(2))
         Physics.beatKick(simState, Math.round(kick / 0.05) * 0.05, 0, 1)
       }
+    } else if (low > bassEma + 0.02 && low > 0.09 && now - kickLast > 0.05) {
+      // Debug: a kick-sized spike that missed the threshold, presumably
+      // because the previous kick lifted the baseline. Remove when tuned.
+      console.warn("lava nearmiss low=" + low.toFixed(2) + " ema=" + bassEma.toFixed(2))
     }
     if (high > highEma + 0.09 && high > 0.2 && now - snareLast > 0.05) {
       snareLast = now
