@@ -60,7 +60,10 @@ Item {
   property bool allScreensFullscreen: false
   property bool onBattery: false
   readonly property bool ecoIdle: ecoPause && allScreensFullscreen
-  readonly property bool ecoSlow: ecoPause && onBattery
+  // Music response is sampled by this timer, so a battery slow-down turns
+  // every beat into visible lag: when the audio engine is running, keep
+  // the full tick rate even on battery.
+  readonly property bool ecoSlow: ecoPause && onBattery && !(musicEnabled && cavaAvailable)
   // Physics domain aspect: radii are fractions of screen height and
   // horizontal distances are corrected by w/h, so use the real primary
   // screen shape instead of assuming 16:9 (ultrawide, portrait...).
