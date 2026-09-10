@@ -368,6 +368,10 @@ function setAudio(state, bass, level, bands) {
         A.bands = [];
         for (var i = 0; i < bands.length && i < AUDIO_BANDS; i++)
             A.bands.push(clamp(Number(bands[i]) || 0, 0, 1));
+    } else if (A.bands && A.bands.length) {
+        // No bands fed (music off, or glow mode) = the sim must go back to
+        // rest, not keep dancing on whatever it last heard.
+        A.bands = [];
     }
 }
 

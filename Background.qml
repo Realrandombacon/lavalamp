@@ -384,7 +384,10 @@ Item {
       resetAudio()
       cavaProc.running = true
     } else if (!want && cavaProc.running) {
+      // Turning music off must leave zero audio state behind, or the
+      // physics keeps running on the last heard frame forever.
       cavaProc.running = false
+      resetAudio()
     }
   }
 

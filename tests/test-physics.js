@@ -191,6 +191,23 @@ boring.blobs = [{ ...midBlob }];
 Physics.beatKick(boring, 0.3);
 check(boring.blobs[0].vy === 0 && (boring.blobs[0].pulse || 0) === 0,
       "disco: reactivity 0 did not mute the party");
+// ---- 11. music off = physics back to rest, no stale-band residue ---------
+const restState = Physics.createState({ blobCount: 1, musicDance: 1.0, jitter: 0 });
+restState.blobs = [{ ...solo, band: 3, phase: 0, pulse: 0 }];
+Physics.setAudio(restState, 0.5, 0.5, bands);
+Physics.step(restState, 1 / 60, 16 / 9);   // bands live: the blob dances
+Physics.setAudio(restState, 0, 0, []);     // music toggled off
+check(restState.audio.bands.length === 0, "empty bands did not clear the sim band state");
+// momentum already given can only decay, not vanish; what must stop is
+// every NEW force, so zero the velocity and demand it stays at rest
+restState.blobs[0].vx = 0;
+restState.blobs[0].vy = 0;
+let residue = 0;
+for (let i = 0; i < 30; i++) {
+  Physics.step(restState, 1 / 60, 16 / 9);
+  residue += Math.abs(restState.blobs[0].vx);
+}
+check(residue === 0, "stale audio kept the blob moving after music off");
 // the dance must never break the sim invariants
 for (let i = 0; i < 600; i++) {
   Physics.step(dancers, 1 / 60, 16 / 9);
