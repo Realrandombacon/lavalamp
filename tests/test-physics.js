@@ -122,8 +122,9 @@ check(kickRun(0) === 0, "musicReactivity 0 did not mute beatKick");
 
 // ---- 9. blob dance: per-band vibration, mute with dance=0 ----------------
 // Bands are spatial: a blob dances on the frequency column it is over.
-const AS = 16 / 9, NB = 8;
-const colX = (band) => ((band + 0.5) / NB) * AS;   // center of a column
+// Blob x spans 0..1 across the full screen width.
+const NB = 8;
+const colX = (band) => (band + 0.5) / NB;   // center of a column
 const dancers = Physics.createState({ blobCount: 1, musicDance: 1.0, jitter: 0 });
 const solo = { x: colX(3), y: 0.5, vx: 0, vy: 0, r: 0.08,
                heat: 0.5, mergeCd: 999, splitCd: 999,

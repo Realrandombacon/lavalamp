@@ -73,7 +73,7 @@ function spawnBlob(p, rng) {
     // Initial band from the spawn column. It is re-derived from the
     // blob's position every substep (bandAt), so this only paints the
     // very first render before the sim ticks.
-    var band = Math.floor(clamp(x / (16 / 9), 0, 0.999) * (p.audioBands || AUDIO_BANDS));
+    var band = Math.floor(clamp(x, 0, 0.999) * (p.audioBands || AUDIO_BANDS));
     return {
         x: x,
         y: 0.8 + 0.18 * rng(),      // blobs are born pooled at the bottom
@@ -145,7 +145,7 @@ function substep(state, dt, aspect, p) {
         // frequency column per band, bass on the left, treble on the
         // right. A blob dances on the column it is over right now, so
         // merges, splits and drift re-band the wax for free.
-        b.band = bandAt(b.x, aspect, p.audioBands);
+        b.band = bandAt(b.x, p.audioBands);
 
         // Heat exchange with the lamp's zones.
         var inHeater = Math.max(0, 1 - Math.abs(1 - b.y) / p.heaterZone); // near y=1
@@ -443,10 +443,11 @@ function beatKick(state, strength, loBand, hiBand) {
 
 // The visualizer is spatial: the screen is sliced left-to-right into one
 // frequency column per band — bass lives on the left, treble on the
-// right, wherever the wax happens to be.
-function bandAt(x, aspect, nBands) {
-    var a = typeof aspect === "number" && aspect > 0 ? aspect : 16 / 9;
-    return Math.floor(clamp(x / a, 0, 0.999) * (nBands || AUDIO_BANDS));
+// right, wherever the wax happens to be. Blob x spans 0..1 across the
+// full screen width (the shader maps uv.x the same way), so no aspect
+// correction here: that would squash every band into the left half.
+function bandAt(x, nBands) {
+    return Math.floor(clamp(x, 0, 0.999) * (nBands || AUDIO_BANDS));
 }
 
 // ------------------------------------------------------- liquid dynamics
