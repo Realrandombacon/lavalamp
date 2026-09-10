@@ -482,19 +482,22 @@ Item {
     bassEma = bassEma * 0.98 + low * 0.02
     highEma = highEma * 0.97 + high * 0.03
     var now = Date.now() / 1000
-    if (low > bassEma + 0.12 && low > 0.15 && now - beatLast > 0.05) {
+    if (low > bassEma + 0.08 && low > 0.09 && now - beatLast > 0.05) {
       beatLast = now
-      if (musicMode !== "glow")
+      if (musicMode !== "glow") {
         // Quantize the strength: two marginal threshold crossings with
         // slightly different bar values then fire the identical kick
         // instead of near-identical but visibly different ones.
-        var kick = 0.22 * (0.5 + low)
+        var kick = 0.28 * (0.5 + low)
+        console.warn("lava kick low=" + low.toFixed(2) + " ema=" + bassEma.toFixed(2))
         Physics.beatKick(simState, Math.round(kick / 0.05) * 0.05, 0, 1)
+      }
     } else if (high > highEma + 0.09 && high > 0.2 && now - beatLast > 0.05) {
       beatLast = now
-      if (musicMode !== "glow")
+      if (musicMode !== "glow") {
         var snap = 0.18 * (0.5 + high)
         Physics.beatKick(simState, Math.round(snap / 0.05) * 0.05, 2, 7)
+      }
     }
   }
 
