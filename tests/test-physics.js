@@ -208,6 +208,12 @@ for (let i = 0; i < 30; i++) {
   residue += Math.abs(restState.blobs[0].vx);
 }
 check(residue === 0, "stale audio kept the blob moving after music off");
+// ---- 12. band assignment: big blobs ride low bands, small ones high ------
+const sized = Physics.createState({ blobCount: 14 });
+const bySize = sized.blobs.slice().sort((a, b) => b.r - a.r);
+for (let i = 1; i < bySize.length; i++)
+  check(bySize[i].band >= bySize[i - 1].band,
+        "band assignment does not follow size (big must be bass)");
 // the dance must never break the sim invariants
 for (let i = 0; i < 600; i++) {
   Physics.step(dancers, 1 / 60, 16 / 9);

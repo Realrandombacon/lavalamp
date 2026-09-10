@@ -67,6 +67,14 @@ function createState(config) {
 
 function spawnBlob(p, rng) {
     var r = p.blobSize * (1.0 - p.sizeSpread * 0.5 + p.sizeSpread * rng());
+    // Band from size, not luck: big blobs ride the bass, small ones the
+    // highs. That keeps the cast of dancers stable and legible (the big
+    // ones visibly pump with the kick), and agrees with merge taking the
+    // lower band (bigger) and splits hopping upward (smaller).
+    var rMin = p.blobSize * (1.0 - p.sizeSpread * 0.5);
+    var rMax = p.blobSize * (1.0 + p.sizeSpread * 0.5);
+    var sizeT = rMax > rMin ? (r - rMin) / (rMax - rMin) : 0.5;
+    var band = Math.floor(clamp(1 - sizeT, 0, 0.999) * AUDIO_BANDS);
     return {
         x: 0.15 + 0.7 * rng(),
         y: 0.8 + 0.18 * rng(),      // blobs are born pooled at the bottom
@@ -76,7 +84,7 @@ function spawnBlob(p, rng) {
         heat: 0.35 + 0.2 * rng(),   // slightly warm: they start rising soon
         mergeCd: 0,                 // pooled newborns may fuse right away
         splitCd: SPLIT_COOLDOWN,
-        band: Math.floor(rng() * AUDIO_BANDS),  // its own frequency to dance on
+        band: band,                             // its own frequency to dance on
         phase: rng() * 6.283,                   // desync the sways
         pulse: 0                                // music glow, decays fast
     };
@@ -176,7 +184,10 @@ function substep(state, dt, aspect, p) {
         // top of the heat in packUniforms and decays quickly, so the wax
         // flickers with the music instead of sticking hot.
         if (dance > 0 && A.bands && A.bands.length > b.band) {
-            var e = A.bands[b.band];
+            // Floor the band energy with a slice of the overall loudness:
+            // mid bands are often near-silent in real music, and a blob on
+            // one must still respond a little instead of going dead.
+            var e = Math.max(A.bands[b.band], A.level * 0.3);
             if (e > 0.01) {
                 var rate = 2.5 + b.band * 1.7;
                 // A raw sinusoid force displaces as 1/rate^2 under drag,
@@ -300,7 +311,7 @@ function packUniforms(state) {
         // sitting swollen while its band sings; the beat envelope pops the
         // whole lamp on every transient.
         if (dance > 0 && A.bands && A.bands.length > b.band) {
-            var e = A.bands[b.band];
+            var e = Math.max(A.bands[b.band], A.level * 0.3);
             if (e > 0.01) {
                 var rate = 2.5 + b.band * 1.7;
                 var breathe = e * dance * (0.5 + 0.5 * Math.sin(state.time * rate * 0.6 + b.phase)) * 0.8;
@@ -400,7 +411,7 @@ function beatKick(state, strength) {
         // wax — blobs riding hot bands leap highest, everything gets a
         // sideways shove and flashes its glow (via b.pulse, so the flash
         // decays with the music glow).
-        var e = bands && bands.length > b.band ? bands[b.band] : 0.5;
+        var e = Math.max(bands && bands.length > b.band ? bands[b.band] : 0.5, 0.4);
         b.vy -= s * (0.2 + 0.8 * e) * 1.2;
         b.vx += (Math.random() - 0.5) * s * 1.5;
         var flash = s * (0.3 + 0.5 * e);
