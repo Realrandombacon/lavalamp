@@ -390,7 +390,7 @@ Item {
   function cavaConfTemplate(bars) {
     return "[general]\nbars = " + bars + "\nframerate = 30\nautosens = 0\n"
          + "[input]\nmethod = pipewire\n"
-         + "[smoothing]\nnoise_reduction = 50\nmonstercat = 1.5\n"
+         + "[smoothing]\nnoise_reduction = 35\nmonstercat = 1.5\n"
          + "[output]\nmethod = raw\ndata_format = ascii\nascii_max_range = 100\n"
          + "bar_delimiter = 32\nframe_delimiter = 10\n"
   }
@@ -485,11 +485,16 @@ Item {
     if (low > bassEma + 0.12 && low > 0.15 && now - beatLast > 0.05) {
       beatLast = now
       if (musicMode !== "glow")
-        Physics.beatKick(simState, 0.22 * (0.5 + low), 0, 1)
+        // Quantize the strength: two marginal threshold crossings with
+        // slightly different bar values then fire the identical kick
+        // instead of near-identical but visibly different ones.
+        var kick = 0.22 * (0.5 + low)
+        Physics.beatKick(simState, Math.round(kick / 0.05) * 0.05, 0, 1)
     } else if (high > highEma + 0.09 && high > 0.2 && now - beatLast > 0.05) {
       beatLast = now
       if (musicMode !== "glow")
-        Physics.beatKick(simState, 0.18 * (0.5 + high), 2, 7)
+        var snap = 0.18 * (0.5 + high)
+        Physics.beatKick(simState, Math.round(snap / 0.05) * 0.05, 2, 7)
     }
   }
 
