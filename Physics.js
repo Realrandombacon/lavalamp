@@ -27,6 +27,7 @@ var MAX_BLOBS = 32;
 // Frequency bands streamed by the audio analysis (cava config ships with
 // the plugin and must keep bars = 8 in sync with this).
 var AUDIO_BANDS = 8;
+var MAX_BANDS = 32;
 
 // Fixed liquid-dynamics timings (seconds), not user-facing.
 var MERGE_COOLDOWN = 1.6;
@@ -52,7 +53,8 @@ var DEFAULTS = {
     splitSpeed: 0.16,     // a blob above target count moving faster than
                           // this (vertically) may pinch off into two
     musicReactivity: 0.5, // how hard the music drives the lamp (0 = off)
-    musicDance: 0.5       // per-blob vibration/glow on their own bands (0 = off)
+    musicDance: 0.5,      // per-blob vibration/glow on their own bands (0 = off)
+    audioBands: 8         // cava band count; the shell ties it to blobCount
 };
 
 function createState(config) {
@@ -74,7 +76,7 @@ function spawnBlob(p, rng) {
     var rMin = p.blobSize * (1.0 - p.sizeSpread * 0.5);
     var rMax = p.blobSize * (1.0 + p.sizeSpread * 0.5);
     var sizeT = rMax > rMin ? (r - rMin) / (rMax - rMin) : 0.5;
-    var band = Math.floor(clamp(1 - sizeT, 0, 0.999) * AUDIO_BANDS);
+    var band = Math.floor(clamp(1 - sizeT, 0, 0.999) * (p.audioBands || AUDIO_BANDS));
     return {
         x: 0.15 + 0.7 * rng(),
         y: 0.8 + 0.18 * rng(),      // blobs are born pooled at the bottom
@@ -196,7 +198,7 @@ function substep(state, dt, aspect, p) {
                 // big and slow, high blobs flutter small and fast.
                 var amp = dance * e * rate * dt * 0.19;
                 b.vx += Math.sin(state.time * rate + b.phase) * amp
-                      + (Math.random() - 0.5) * amp * 0.8;
+                      + (Math.random() - 0.5) * amp * 0.35;
                 b.vy += Math.cos(state.time * rate * 0.83 + b.phase) * amp * 0.45;
                 // Glow eases toward its target (no spiky peaks) and decays.
                 var glow = e * dance * 0.4;
@@ -304,7 +306,9 @@ function packUniforms(state) {
     var dance = state.params.musicDance || 0;
     var beat = A.beat || 0;
     var beatLo = A.beatLo === undefined ? 0 : A.beatLo;
-    var beatHi = A.beatHi === undefined ? AUDIO_BANDS - 1 : A.beatHi;
+    var beatHi = A.beatHi === undefined
+        ? (A.bands && A.bands.length ? A.bands.length : state.params.audioBands || AUDIO_BANDS) - 1
+        : A.beatHi;
     for (var i = 0; i < state.blobs.length; i++) {
         var b = state.blobs[i];
         var rr = b.r;
@@ -384,7 +388,7 @@ function setAudio(state, bass, level, bands) {
     A.level = clamp(Number(level) || 0, 0, 1);
     if (bands && bands.length) {
         A.bands = [];
-        for (var i = 0; i < bands.length && i < AUDIO_BANDS; i++)
+        for (var i = 0; i < bands.length && i < MAX_BANDS; i++)
             A.bands.push(clamp(Number(bands[i]) || 0, 0, 1));
     } else if (A.bands && A.bands.length) {
         // No bands fed (music off, or glow mode) = the sim must go back to
@@ -406,7 +410,9 @@ function beatKick(state, strength, loBand, hiBand) {
     // get the full hit, neighboring bands half, far bands a quarter — a
     // kick lights the bass blobs, a snare the treble ones.
     A.beatLo = loBand || 0;
-    A.beatHi = hiBand === undefined ? AUDIO_BANDS - 1 : hiBand;
+    A.beatHi = hiBand === undefined
+        ? (A.bands && A.bands.length ? A.bands.length : (p.audioBands || AUDIO_BANDS)) - 1
+        : hiBand;
     // Envelope for the beat response (swell + flash): peaks on every
     // transient, substep decays it fast so each hit is one pop.
     A.beat = Math.max(A.beat || 0, Math.min(1, s * 2));
@@ -498,7 +504,7 @@ function trySplit(state, dt, p) {
         heat: clamp(heat - 0.10, 0, 1),
         mergeCd: MERGE_COOLDOWN, splitCd: SPLIT_COOLDOWN,
         // The tear lands on a neighboring band so splits widen the dance.
-        band: (best.band + 1 + Math.floor(Math.random() * 2)) % AUDIO_BANDS,
+        band: (best.band + 1 + Math.floor(Math.random() * 2)) % (p.audioBands || AUDIO_BANDS),
         phase: Math.random() * 6.283, pulse: best.pulse
     };
 
@@ -536,7 +542,7 @@ function seededRandom(seed) {
 // Headless testing under node (a no-op inside QML, where `module` is
 // undefined and the file is imported as a QML JS library).
 if (typeof module !== "undefined" && module.exports)
-    module.exports = { MAX_BLOBS: MAX_BLOBS, AUDIO_BANDS: AUDIO_BANDS,
+    module.exports = { MAX_BLOBS: MAX_BLOBS, AUDIO_BANDS: AUDIO_BANDS, MAX_BANDS: MAX_BANDS,
                        DEFAULTS: DEFAULTS,
                        createState: createState, applyConfig: applyConfig,
                        step: step, packUniforms: packUniforms,

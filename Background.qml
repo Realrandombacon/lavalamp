@@ -121,6 +121,8 @@ Item {
     }
     var accentChanged = next.accentHue !== lampConfig.accentHue || next.accentSat !== lampConfig.accentSat
     lampConfig = next
+    // The band count follows the blob count: one band per blob.
+    next.audioBands = next.blobCount
     Physics.applyConfig(simState, next)
     simTimeScale = next.speed
     lampHue = next.hue
@@ -131,7 +133,7 @@ Item {
     lampEnabled = next.lampEnabled
     musicEnabled = next.musicEnabled
     musicMode = next.musicMode
-    updateAudioEngine()
+    syncCavaEngine()
     if (accentChanged) {
       lampAccentHue = next.accentHue
       lampAccentSat = next.accentSat
@@ -378,9 +380,48 @@ Item {
   }
   // ---- Music reactivity engine. One cava process, started lazily and
   //      only when the feature is on and the binary exists; its stdout is
-  //      parsed per line (raw + ascii output mode — see lavalamp-cava.conf).
-  readonly property string cavaConfPath: decodeURIComponent(
-    String(Qt.resolvedUrl("lavalamp-cava.conf")).replace(/^file:\/\//, ""))
+  //      parsed per line (raw + ascii output mode). The conf is generated
+  //      at runtime so the band count follows the blob count; it lives in
+  //      the state dir, NOT the plugin dir (a write there would trigger
+  //      the plugin hot-reload storm).
+  readonly property string cavaConfPath: home + "/.config/lavalamp/cava.conf"
+  property int cavaBarsCurrent: -1      // bars value currently in the conf file
+
+  function cavaConfTemplate(bars) {
+    return "[general]\nbars = " + bars + "\nframerate = 30\nautosens = 0\n"
+         + "[input]\nmethod = pipewire\n"
+         + "[smoothing]\nnoise_reduction = 50\nmonstercat = 1.5\n"
+         + "[output]\nmethod = raw\ndata_format = ascii\nascii_max_range = 100\n"
+         + "bar_delimiter = 32\nframe_delimiter = 10\n"
+  }
+
+  // Write the conf for the current blob count, then (re)start cava once
+  // the async write has landed.
+  function syncCavaEngine() {
+    var bars = lampConfig.blobCount
+    if (cavaBarsCurrent !== bars) {
+      cavaBarsCurrent = bars
+      cavaConfFile.setText(cavaConfTemplate(bars))
+      if (cavaProc.running) cavaProc.running = false
+      cavaReconfTimer.restart()
+      return
+    }
+    updateAudioEngine()
+  }
+
+  Timer {
+    id: cavaReconfTimer
+    interval: 400
+    onTriggered: root.updateAudioEngine()
+  }
+
+  FileView {
+    id: cavaConfFile
+    path: root.cavaConfPath
+    watchChanges: false
+    atomicWrites: true
+    printErrors: false
+  }
 
   function updateAudioEngine() {
     var want = musicEnabled && cavaAvailable && lampEnabled
@@ -399,6 +440,7 @@ Item {
     audioBass = 0
     audioLevel = 0
     bassEma = 0
+    highEma = 0
     audioBands = []
   }
 
@@ -430,19 +472,21 @@ Item {
     // (a snare's body bleeds into band 1-2, its noise into the highs), the
     // snare detector to the mid/high energy. Each fires its own beatKick
     // band range, so the bass blobs glow on kicks, the small ones on snares.
+    // Fast EMAs + a modest threshold: with a slow baseline every second
+    // snare gets absorbed into it and skipped.
     var low = raw[0] || 0
     var high = 0
     for (i = 2; i < raw.length; i++) high += raw[i]
     high = raw.length > 2 ? high / (raw.length - 2) : 0
     audioBass = low > audioBass ? low : audioBass * 0.82 + low * 0.18
-    bassEma = bassEma * 0.97 + low * 0.03
-    highEma = highEma * 0.96 + high * 0.04
+    bassEma = bassEma * 0.94 + low * 0.06
+    highEma = highEma * 0.90 + high * 0.10
     var now = Date.now() / 1000
-    if (low > bassEma + 0.12 && low > 0.15 && now - beatLast > 0.15) {
+    if (low > bassEma + 0.12 && low > 0.15 && now - beatLast > 0.18) {
       beatLast = now
       if (musicMode !== "glow")
         Physics.beatKick(simState, 0.22 * (0.5 + low), 0, 1)
-    } else if (high > highEma + 0.12 && high > 0.2 && now - beatLast > 0.15) {
+    } else if (high > highEma + 0.09 && high > 0.2 && now - beatLast > 0.18) {
       beatLast = now
       if (musicMode !== "glow")
         Physics.beatKick(simState, 0.18 * (0.5 + high), 2, 7)
@@ -455,7 +499,7 @@ Item {
     stdout: StdioCollector {
       onStreamFinished: {
         root.cavaAvailable = String(text).trim() !== ""
-        root.updateAudioEngine()
+        root.syncCavaEngine()
       }
     }
   }

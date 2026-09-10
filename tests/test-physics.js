@@ -222,6 +222,16 @@ const bySize = sized.blobs.slice().sort((a, b) => b.r - a.r);
 for (let i = 1; i < bySize.length; i++)
   check(bySize[i].band >= bySize[i - 1].band,
         "band assignment does not follow size (big must be bass)");
+// the band count follows the blob count: with audioBands = 20 every band
+// index must fit, and setAudio must keep a wider spectrum as-is
+const wide = Physics.createState({ blobCount: 10, audioBands: 20, musicDance: 1.0 });
+for (const b of wide.blobs)
+  check(b.band < 20, "wide band count: blob band out of range");
+const wideSpectrum = new Array(20).fill(0.5);
+Physics.setAudio(wide, 0.5, 0.5, wideSpectrum);
+check(wide.audio.bands.length === 20, "setAudio did not keep a 20-band spectrum");
+Physics.step(wide, 1 / 60, 16 / 9);
+check(isFinite(wide.blobs[0].x + wide.blobs[0].y), "wide band count: NaN blob");
 // ---- 13. transient routing: a kick lights the bass blobs, not the treble -
 const routed = Physics.createState({ blobCount: 0, musicReactivity: 1.0, musicDance: 0 });
 const bigOne = { x: 0.5 * 16 / 9, y: 0.5, vx: 0, vy: 0, r: 0.1, heat: 0.2,
