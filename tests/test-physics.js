@@ -135,16 +135,24 @@ for (let i = 0; i < 60; i++) {
 }
 check(moved > 0.01, "band energy did not make the blob dance");
 check(dancers.blobs[0].pulse > 0, "band energy did not pulse the blob glow");
-// a blob on a silent band must not dance
+// a blob on a silent band must not dance in true silence (level 0: the
+// loudness floor contributes nothing); with music loud it must respond
 const quiet = Physics.createState({ blobCount: 1, musicDance: 1.0, jitter: 0 });
 quiet.blobs = [{ ...solo, vx: 0, vy: 0, band: 6, phase: 0, pulse: 0 }];
-Physics.setAudio(quiet, 0.5, 0.5, bands);
+Physics.setAudio(quiet, 0, 0, bands);
 let movedQuiet = 0;
 for (let i = 0; i < 60; i++) {
   Physics.step(quiet, 1 / 60, 16 / 9);
   movedQuiet += Math.abs(quiet.blobs[0].vx);
 }
 check(movedQuiet === 0, "silent band made the blob move anyway");
+Physics.setAudio(quiet, 0, 0.8, bands);
+let floored = 0;
+for (let i = 0; i < 60; i++) {
+  Physics.step(quiet, 1 / 60, 16 / 9);
+  floored += Math.abs(quiet.blobs[0].vx);
+}
+check(floored > 0, "loudness floor left a quiet-band blob dead");
 // dance=0 mutes everything, pulse decays back to rest
 const still = Physics.createState({ blobCount: 1, musicDance: 0, jitter: 0 });
 still.blobs = [{ ...solo, vx: 0, vy: 0, band: 3, phase: 0, pulse: 0.5 }];
@@ -164,7 +172,7 @@ for (let i = 0; i < 90; i++) {
 check(maxR > solo.r * 1.05, "singing band did not swell the blob (max r " + maxR.toFixed(3) + ")");
 const muteR = Physics.createState({ blobCount: 1, musicDance: 1.0, jitter: 0 });
 muteR.blobs = [{ ...solo, band: 6, phase: 0, pulse: 0 }];
-Physics.setAudio(muteR, 0.5, 0.5, bands);
+Physics.setAudio(muteR, 0, 0, bands);
 for (let i = 0; i < 90; i++) {
   Physics.step(muteR, 1 / 60, 16 / 9);
   check(Math.abs(Physics.packUniforms(muteR)[2] - solo.r) < 1e-6, "silent band changed the rendered radius");
