@@ -1,5 +1,55 @@
 # Changelog
 
+## 2.0.0 — 2026-09-09
+
+The music-reactive lamp becomes a true music visualizer: the lamp is a
+spatial equalizer, the wax re-bands itself as it drifts, and the
+transient response is deterministic and tunable from the panel.
+
+- The screen is the visualizer: the lamp is sliced left-to-right into
+  one frequency column per band and every blob rides the column it is
+  over right now — bass lives on the left, treble on the right, and
+  merges, splits and drift re-band the wax automatically. Transient
+  routing follows: kicks launch the low columns, snares the middle.
+- The band count follows the Blob count slider (up to 32): cava's
+  config is regenerated with `bars = blobCount` and cava restarts only
+  when the count changes.
+- Transient response is deterministic: the same sound always launches
+  a blob the same way (the kick sets the upward velocity instead of
+  adding to whatever the blob was doing), strengths are quantized so
+  close hits clone their reaction, and the detection baselines no
+  longer chase the hits themselves.
+- Kick and snare have separate cooldowns (a shared one swallowed every
+  second kick in electronic music), cava runs at 60 fps with lighter
+  smoothing so short kicks resolve, and the routing ranges scale with
+  the live band count with a steeper out-of-band falloff.
+- Four new music sliders: Transient punch (launch strength), Detection
+  (transient threshold), Transient flash (swell + glow per hit) and
+  Ambient floor (the whole-lamp shimmer on overall loudness).
+
+## 1.3.1 — 2026-09-09
+
+- The screen is the visualizer: the lamp is sliced left-to-right into
+  one frequency column per band and every blob rides the column it is
+  over right now — bass lives on the left, treble on the right, and
+  merges, splits and drift re-band the wax automatically. Transient
+  routing follows: kicks launch the low columns, snares the middle.
+- The band count follows the Blob count slider (up to 32): cava's
+  config is regenerated with `bars = blobCount` and cava restarts only
+  when the count changes.
+- Transient response is deterministic: the same sound always launches
+  a blob the same way (the kick sets the upward velocity instead of
+  adding to whatever the blob was doing), strengths are quantized so
+  close hits clone their reaction, and the detection baselines no
+  longer chase the hits themselves.
+- Kick and snare have separate cooldowns (a shared one swallowed every
+  second kick in electronic music), cava runs at 60 fps with lighter
+  smoothing so short kicks resolve, and the routing ranges scale with
+  the live band count with a steeper out-of-band falloff.
+- Four new music sliders: Transient punch (launch strength), Detection
+  (transient threshold), Transient flash (swell + glow per hit) and
+  Ambient floor (the whole-lamp shimmer on overall loudness).
+
 ## 1.3.1 — 2026-09-09
 
 - Blob dance: every blob is assigned its own frequency band at spawn and
