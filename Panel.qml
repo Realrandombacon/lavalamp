@@ -770,6 +770,54 @@ Item {
             onReleased: root.save()
           }
 
+          PanelRow {
+            width: parent.width
+            label: "Transient punch"
+            hint: "How hard kicks and snares launch the wax."
+            detail: Math.round(root.current("musicPunch", 1.0) * 100) + " %"
+            minimum: 0; maximum: 2; step: 0.05
+            value: root.current("musicPunch", 1.0)
+            enabled: root.current("musicEnabled", true)
+            onMoved: function(v) { root.apply({ musicPunch: v }) }
+            onReleased: root.save()
+          }
+
+          PanelRow {
+            width: parent.width
+            label: "Detection"
+            hint: "How easily a hit triggers a response: high catches soft hits, low keeps only the big ones."
+            detail: Math.round(root.current("musicSensitivity", 0.5) * 100) + " %"
+            minimum: 0; maximum: 1; step: 0.05
+            value: root.current("musicSensitivity", 0.5)
+            enabled: root.current("musicEnabled", true)
+            onMoved: function(v) { root.apply({ musicSensitivity: v }) }
+            onReleased: root.save()
+          }
+
+          PanelRow {
+            width: parent.width
+            label: "Transient flash"
+            hint: "How much every hit swells the blobs and brightens the glow, on top of the motion."
+            detail: Math.round(root.current("musicFlash", 1.0) * 100) + " %"
+            minimum: 0; maximum: 2; step: 0.05
+            value: root.current("musicFlash", 1.0)
+            enabled: root.current("musicEnabled", true)
+            onMoved: function(v) { root.apply({ musicFlash: v }) }
+            onReleased: root.save()
+          }
+
+          PanelRow {
+            width: parent.width
+            label: "Ambient floor"
+            hint: "How much the whole lamp shimmers with overall loudness, even outside the hit's columns."
+            detail: Math.round(root.current("musicFloor", 0.15) * 100) + " %"
+            minimum: 0; maximum: 1; step: 0.05
+            value: root.current("musicFloor", 0.15)
+            enabled: root.current("musicEnabled", true)
+            onMoved: function(v) { root.apply({ musicFloor: v }) }
+            onReleased: root.save()
+          }
+
           Dropdown {
             id: modeDropdown
             width: parent.width
@@ -862,6 +910,8 @@ Item {
                            accentHue: 0.0, accentSat: 1.0,
                            musicEnabled: true, musicReactivity: 0.5,
                            musicDance: 0.5, musicMode: "full",
+                           musicPunch: 1.0, musicSensitivity: 0.5,
+                           musicFloor: 0.15, musicFlash: 1.0,
                            lampEnabled: true })
               root.save()
             }

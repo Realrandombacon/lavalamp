@@ -86,6 +86,8 @@ Item {
                               buoyancy: 0.55, drag: 1.6, repulsion: 4.5,
                               musicEnabled: true, musicReactivity: 0.5,
                               musicDance: 0.5, musicMode: "full",
+                              musicPunch: 1.0, musicSensitivity: 0.5,
+                              musicFloor: 0.15, musicFlash: 1.0,
                               lampEnabled: true })
 
   function applyLampConfig(cfg) {
@@ -117,6 +119,10 @@ Item {
       musicEnabled: c.musicEnabled !== false && c.musicEnabled !== 0,
       musicReactivity: Physics.clamp(c.musicReactivity === 0 ? 0 : (Number(c.musicReactivity) || 0.5), 0, 1),
       musicDance: Physics.clamp(c.musicDance === 0 ? 0 : (Number(c.musicDance) || 0.5), 0, 1),
+      musicPunch: Physics.clamp(Number(c.musicPunch === undefined ? 1 : c.musicPunch) || 0, 0, 2),
+      musicSensitivity: Physics.clamp(Number(c.musicSensitivity === undefined ? 0.5 : c.musicSensitivity) || 0, 0, 1),
+      musicFloor: Physics.clamp(c.musicFloor === undefined ? 0.15 : Number(c.musicFloor), 0, 1),
+      musicFlash: Physics.clamp(Number(c.musicFlash === undefined ? 1 : c.musicFlash) || 0, 0, 2),
       musicMode: ["glow", "wax", "full"].indexOf(c.musicMode) >= 0 ? c.musicMode : "full",
       lampEnabled: c.lampEnabled !== false && c.lampEnabled !== 0
     }
@@ -485,6 +491,10 @@ Item {
     bassEma = bassEma * 0.98 + low * 0.02
     highEma = highEma * 0.97 + high * 0.03
     var now = Date.now() / 1000
+    // Detection margin from the sensitivity slider (0.5 = the calibrated
+    // default): sensitive picks up soft hits, insensitive keeps only the
+    // big ones.
+    var margin = 0.02 + (1 - lampConfig.musicSensitivity) * 0.14
     // Routing ranges scale with the live band count (the 2..7 snare range
     // was calibrated for cava's 8 bands): the kick takes the lowest
     // eighth of the columns, the snare the 25%..87% slice.
@@ -495,7 +505,7 @@ Item {
     // Separate cooldowns: in a single drum hit the transient click (highs)
     // crosses the snare threshold a frame or two before the sub-bass peak
     // arrives; a shared cooldown swallowed every second kick.
-    if (low > bassEma + 0.08 && low > 0.09 && now - kickLast > 0.05) {
+    if (low > bassEma + margin && low > 0.09 && now - kickLast > 0.05) {
       kickLast = now
       if (musicMode !== "glow") {
         // Quantize the strength: two marginal threshold crossings with
@@ -505,12 +515,12 @@ Item {
         console.warn("lava kick low=" + low.toFixed(2) + " ema=" + bassEma.toFixed(2))
         Physics.beatKick(simState, Math.round(kick / 0.05) * 0.05, 0, kickHi)
       }
-    } else if (low > bassEma + 0.02 && low > 0.09 && now - kickLast > 0.05) {
+    } else if (low > bassEma + margin * 0.25 && low > 0.09 && now - kickLast > 0.05) {
       // Debug: a kick-sized spike that missed the threshold, presumably
       // because the previous kick lifted the baseline. Remove when tuned.
       console.warn("lava nearmiss low=" + low.toFixed(2) + " ema=" + bassEma.toFixed(2))
     }
-    if (high > highEma + 0.09 && high > 0.2 && now - snareLast > 0.05) {
+    if (high > highEma + margin && high > 0.2 && now - snareLast > 0.05) {
       snareLast = now
       if (musicMode !== "glow") {
         var snap = 0.18 * (0.5 + high)

@@ -54,6 +54,10 @@ var DEFAULTS = {
                           // this (vertically) may pinch off into two
     musicReactivity: 0.5, // how hard the music drives the lamp (0 = off)
     musicDance: 0.5,      // per-blob vibration/glow on their own bands (0 = off)
+    musicPunch: 1.0,      // transient launch strength multiplier (kick/snare)
+    musicFlash: 1.0,      // transient glow/swell multiplier (render-only)
+    musicFloor: 0.15,     // loudness floor: every blob shimmers with a
+                          // slice of the overall level, not just its band
     audioBands: 8         // cava band count; the shell ties it to blobCount
 };
 
@@ -193,7 +197,7 @@ function substep(state, dt, aspect, p) {
             // loudness so quiet-band blobs never go fully dead — but keep
             // it small: overall loudness must not make voice tracks read
             // as bass.
-            var e = Math.max(A.bands[b.band], A.level * 0.15);
+            var e = Math.max(A.bands[b.band], A.level * (p.musicFloor === undefined ? 0.15 : p.musicFloor));
             if (e > 0.01) {
                 var rate = 2.5 + b.band * 1.7;
                 // Spectral fidelity: scale the force by rate (not rate^2)
@@ -305,8 +309,11 @@ function substep(state, dt, aspect, p) {
 // unused slots zeroed (r=0 contributes nothing to the field).
 function packUniforms(state) {
     var data = new Float32Array(MAX_BLOBS * 4);
+    var p = state.params;
     var A = state.audio || {};
-    var dance = state.params.musicDance || 0;
+    var dance = p.musicDance || 0;
+    var flash = p.musicFlash === undefined ? 1.0 : p.musicFlash;
+    var floor = p.musicFloor === undefined ? 0.15 : p.musicFloor;
     var beat = A.beat || 0;
     var beatLo = A.beatLo === undefined ? 0 : A.beatLo;
     var beatHi = A.beatHi === undefined
@@ -325,19 +332,19 @@ function packUniforms(state) {
         // are untouched). The slow sine makes it pump instead of just
         // sitting swollen while its band sings.
         if (dance > 0 && A.bands && A.bands.length > b.band) {
-            var e = Math.max(A.bands[b.band], A.level * 0.15);
+            var e = Math.max(A.bands[b.band], A.level * floor);
             if (e > 0.01) {
                 var rate = 2.5 + b.band * 1.7;
                 var breathe = e * dance * (0.5 + 0.5 * Math.sin(state.time * rate * 0.6 + b.phase)) * 0.8;
-                rr = b.r * (1 + breathe + beat * 0.3 * bw);
+                rr = b.r * (1 + breathe + beat * 0.3 * bw * flash);
             }
         } else {
-            rr = b.r * (1 + beat * 0.3 * bw);
+            rr = b.r * (1 + beat * 0.3 * bw * flash);
         }
         data[i * 4] = b.x;
         data[i * 4 + 1] = b.y;
         data[i * 4 + 2] = rr;
-        data[i * 4 + 3] = clamp(b.heat + (b.pulse || 0) + beat * 0.15 * bw, 0, 1);
+        data[i * 4 + 3] = clamp(b.heat + (b.pulse || 0) + beat * 0.15 * bw * flash, 0, 1);
     }
     return data;
 }
@@ -406,7 +413,8 @@ function setAudio(state, bass, level, bands) {
 // reactivity on the shell side) and fades with distance from the heater.
 function beatKick(state, strength, loBand, hiBand) {
     var p = state.params;
-    var s = clamp(strength, 0, 0.5) * p.musicReactivity;
+    var punch = p.musicPunch === undefined ? 1.0 : p.musicPunch;
+    var s = clamp(strength, 0, 0.5) * p.musicReactivity * punch;
     if (s <= 0) return;
     var A = state.audio;
     // Route the transient to its frequency neighborhood: loBand..hiBand

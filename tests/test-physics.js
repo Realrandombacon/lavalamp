@@ -20,6 +20,8 @@ Physics.applyConfig(st, { mergeThreshold: 0.7, mergeSpeed: 0.9, splitSpeed: 0.5,
                           buoyancy: 0.9, drag: 0.6, repulsion: 7.5 });
 check(st.params.mergeThreshold === 0.7 && st.params.drag === 0.6,
       "applyConfig did not take new values");
+for (const k of ["musicPunch", "musicFlash", "musicFloor"])
+  check(typeof st.params[k] === "number", "missing DEFAULTS." + k);
 
 // ---- 2. pointer stir: warms and pushes, eases out ------------------------
 st = Physics.createState({ blobCount: 6, jitter: 0 });
@@ -277,6 +279,39 @@ check(a1.vy === a2.vy && a1.heat === a2.heat && a1.pulse === a2.pulse,
 const falling = kickProbe(0.5), rising = kickProbe(-0.5);
 check(falling.vy === a1.vy, "a falling blob kicked weaker than a resting one");
 check(rising.vy === a1.vy, "an already-rising blob kicked differently");
+// ---- 15. music sliders: punch, flash, floor ------------------------------
+// punch scales the transient launch
+function punchVy(punch) {
+  const s = Physics.createState({ blobCount: 0, musicReactivity: 1.0, musicDance: 0, musicPunch: punch });
+  s.blobs = [{ x: colX(0), y: 0.5, vx: 0, vy: 0, r: 0.08, heat: 0.2,
+               mergeCd: 999, splitCd: 999, band: 0, phase: 0, pulse: 0 }];
+  Physics.beatKick(s, 0.3, 0, 1);
+  return Math.abs(s.blobs[0].vy);
+}
+check(punchVy(2) > punchVy(1), "punch 2 did not hit harder than punch 1");
+check(punchVy(0) === 0, "punch 0 did not mute the kick");
+// flash scales the beat swell (render-only)
+function flashR(flash) {
+  const s = Physics.createState({ blobCount: 0, musicDance: 1.0, musicFlash: flash });
+  s.blobs = [{ x: colX(3), y: 0.5, vx: 0, vy: 0, r: 0.08, heat: 0.2,
+               mergeCd: 999, splitCd: 999, band: 3, phase: 0, pulse: 0 }];
+  Physics.setAudio(s, 0.5, 0.5, new Array(8).fill(0.5));
+  Physics.beatKick(s, 0.3, 0, 7);
+  return Physics.packUniforms(s)[2];
+}
+check(flashR(2) > flashR(1), "flash 2 did not swell more than flash 1");
+check(flashR(0) < flashR(1), "flash 0 did not mute the swell");
+// the ambient floor is tunable: 0 leaves quiet-band blobs dead even when
+// the track is loud
+const floor0 = Physics.createState({ blobCount: 1, musicDance: 1.0, jitter: 0, musicFloor: 0 });
+floor0.blobs = [{ ...solo, x: colX(6), vx: 0, vy: 0, band: 6, phase: 0, pulse: 0 }];
+Physics.setAudio(floor0, 0, 0.8, bands);
+let mFloor0 = 0;
+for (let i = 0; i < 60; i++) {
+  Physics.step(floor0, 1 / 60, 16 / 9);
+  mFloor0 += Math.abs(floor0.blobs[0].vx);
+}
+check(mFloor0 === 0, "musicFloor 0 did not silence quiet-band blobs");
 // the dance must never break the sim invariants
 for (let i = 0; i < 600; i++) {
   Physics.step(dancers, 1 / 60, 16 / 9);

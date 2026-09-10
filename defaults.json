@@ -19,6 +19,10 @@
   "musicEnabled": true,
   "musicReactivity": 0.5,
   "musicDance": 0.5,
+  "musicPunch": 1.0,
+  "musicSensitivity": 0.5,
+  "musicFloor": 0.15,
+  "musicFlash": 1.0,
   "musicMode": "full",
   "lampEnabled": true
 }
