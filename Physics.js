@@ -184,22 +184,23 @@ function substep(state, dt, aspect, p) {
         // top of the heat in packUniforms and decays quickly, so the wax
         // flickers with the music instead of sticking hot.
         if (dance > 0 && A.bands && A.bands.length > b.band) {
-            // Floor the band energy with a slice of the overall loudness:
-            // mid bands are often near-silent in real music, and a blob on
-            // one must still respond a little instead of going dead.
-            var e = Math.max(A.bands[b.band], A.level * 0.3);
+            // Floor the band energy with a small slice of the overall
+            // loudness so quiet-band blobs never go fully dead — but keep
+            // it small: overall loudness must not make voice tracks read
+            // as bass.
+            var e = Math.max(A.bands[b.band], A.level * 0.15);
             if (e > 0.01) {
                 var rate = 2.5 + b.band * 1.7;
-                // A raw sinusoid force displaces as 1/rate^2 under drag,
-                // which made every band above the first invisible; scale
-                // by rate^2 so the sway amplitude is the same on all bands.
-                var amp = dance * e * rate * rate * dt * 0.09;
+                // Spectral fidelity: scale the force by rate (not rate^2)
+                // so the displacement falls as 1/rate — bass blobs wobble
+                // big and slow, high blobs flutter small and fast.
+                var amp = dance * e * rate * dt * 0.19;
                 b.vx += Math.sin(state.time * rate + b.phase) * amp
                       + (Math.random() - 0.5) * amp * 0.8;
                 b.vy += Math.cos(state.time * rate * 0.83 + b.phase) * amp * 0.45;
-                // Peak-and-decay glow: NOT scaled by dt, that made it ~0.002.
+                // Glow eases toward its target (no spiky peaks) and decays.
                 var glow = e * dance * 0.4;
-                if (glow > b.pulse) b.pulse = glow;
+                if (glow > b.pulse) b.pulse += (glow - b.pulse) * Math.min(1, dt * 8);
             }
         }
         if (b.pulse > 0) b.pulse -= dt * 1.8;
@@ -311,7 +312,7 @@ function packUniforms(state) {
         // sitting swollen while its band sings; the beat envelope pops the
         // whole lamp on every transient.
         if (dance > 0 && A.bands && A.bands.length > b.band) {
-            var e = Math.max(A.bands[b.band], A.level * 0.3);
+            var e = Math.max(A.bands[b.band], A.level * 0.15);
             if (e > 0.01) {
                 var rate = 2.5 + b.band * 1.7;
                 var breathe = e * dance * (0.5 + 0.5 * Math.sin(state.time * rate * 0.6 + b.phase)) * 0.8;
@@ -414,7 +415,7 @@ function beatKick(state, strength) {
         var e = Math.max(bands && bands.length > b.band ? bands[b.band] : 0.5, 0.4);
         b.vy -= s * (0.2 + 0.8 * e) * 1.2;
         b.vx += (Math.random() - 0.5) * s * 1.5;
-        var flash = s * (0.2 + 0.35 * e);
+        var flash = s * (0.4 + 0.6 * e);
         if (flash > (b.pulse || 0)) b.pulse = flash;
     }
 }
