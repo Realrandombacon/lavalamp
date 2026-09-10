@@ -222,6 +222,20 @@ const bySize = sized.blobs.slice().sort((a, b) => b.r - a.r);
 for (let i = 1; i < bySize.length; i++)
   check(bySize[i].band >= bySize[i - 1].band,
         "band assignment does not follow size (big must be bass)");
+// ---- 13. transient routing: a kick lights the bass blobs, not the treble -
+const routed = Physics.createState({ blobCount: 0, musicReactivity: 1.0, musicDance: 0 });
+const bigOne = { x: 0.5 * 16 / 9, y: 0.5, vx: 0, vy: 0, r: 0.1, heat: 0.2,
+                 mergeCd: 999, splitCd: 999, band: 0, phase: 0, pulse: 0 };
+const smallOne = { x: 0.7 * 16 / 9, y: 0.5, vx: 0, vy: 0, r: 0.05, heat: 0.2,
+                   mergeCd: 999, splitCd: 999, band: 7, phase: 0, pulse: 0 };
+routed.blobs = [{ ...bigOne }, { ...smallOne }];
+Physics.beatKick(routed, 0.3, 0, 1);
+check(routed.blobs[0].pulse > routed.blobs[1].pulse * 2, "kick did not favor the bass blobs");
+check(routed.blobs[0].vy < routed.blobs[1].vy, "kick did not launch the bass blobs harder");
+const snared = Physics.createState({ blobCount: 0, musicReactivity: 1.0, musicDance: 0 });
+snared.blobs = [{ ...bigOne }, { ...smallOne }];
+Physics.beatKick(snared, 0.3, 2, 7);
+check(snared.blobs[1].pulse > snared.blobs[0].pulse * 2, "snare did not favor the treble blobs");
 // the dance must never break the sim invariants
 for (let i = 0; i < 600; i++) {
   Physics.step(dancers, 1 / 60, 16 / 9);

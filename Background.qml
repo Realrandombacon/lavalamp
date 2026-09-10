@@ -43,7 +43,8 @@ Item {
   property real audioBass: 0          // smoothed low-band energy, 0..1
   property real audioLevel: 0         // smoothed overall loudness, 0..1
   property var audioBands: []         // smoothed per-band energies, 0..1
-  property real bassEma: 0            // slow bass baseline (beat detection)
+  property real bassEma: 0            // slow low-band baseline (kick detection)
+  property real highEma: 0            // slow mid/high baseline (snare detection)
   property real beatLast: 0           // transient cooldown, seconds
   // Pointer play: last cursor position in shader space + whether the cursor
   // is over a background window. Fed into the sim each tick; the strength
@@ -418,7 +419,6 @@ Item {
     }
     bass = bass / 300
     level = level / (n * 100)
-    audioBass = bass > audioBass ? bass : audioBass * 0.82 + bass * 0.18
     audioLevel = level > audioLevel ? level : audioLevel * 0.90 + level * 0.10
     var bands = []
     for (i = 0; i < raw.length; i++) {
@@ -426,12 +426,26 @@ Item {
       bands.push(raw[i] > prev ? raw[i] : prev * 0.85 + raw[i] * 0.15)
     }
     audioBands = bands
-    bassEma = bassEma * 0.97 + bass * 0.03
+    // Transient routing: the kick detector listens to the lowest band only
+    // (a snare's body bleeds into band 1-2, its noise into the highs), the
+    // snare detector to the mid/high energy. Each fires its own beatKick
+    // band range, so the bass blobs glow on kicks, the small ones on snares.
+    var low = raw[0] || 0
+    var high = 0
+    for (i = 2; i < raw.length; i++) high += raw[i]
+    high = raw.length > 2 ? high / (raw.length - 2) : 0
+    audioBass = low > audioBass ? low : audioBass * 0.82 + low * 0.18
+    bassEma = bassEma * 0.97 + low * 0.03
+    highEma = highEma * 0.96 + high * 0.04
     var now = Date.now() / 1000
-    if (bass > bassEma + 0.12 && bass > 0.15 && now - beatLast > 0.15) {
+    if (low > bassEma + 0.12 && low > 0.15 && now - beatLast > 0.15) {
       beatLast = now
       if (musicMode !== "glow")
-        Physics.beatKick(simState, 0.22 * (0.5 + bass))
+        Physics.beatKick(simState, 0.22 * (0.5 + low), 0, 1)
+    } else if (high > highEma + 0.12 && high > 0.2 && now - beatLast > 0.15) {
+      beatLast = now
+      if (musicMode !== "glow")
+        Physics.beatKick(simState, 0.18 * (0.5 + high), 2, 7)
     }
   }
 
