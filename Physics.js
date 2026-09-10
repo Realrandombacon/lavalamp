@@ -69,16 +69,13 @@ function createState(config) {
 
 function spawnBlob(p, rng) {
     var r = p.blobSize * (1.0 - p.sizeSpread * 0.5 + p.sizeSpread * rng());
-    // Band from size, not luck: big blobs ride the bass, small ones the
-    // highs. That keeps the cast of dancers stable and legible (the big
-    // ones visibly pump with the kick), and agrees with merge taking the
-    // lower band (bigger) and splits hopping upward (smaller).
-    var rMin = p.blobSize * (1.0 - p.sizeSpread * 0.5);
-    var rMax = p.blobSize * (1.0 + p.sizeSpread * 0.5);
-    var sizeT = rMax > rMin ? (r - rMin) / (rMax - rMin) : 0.5;
-    var band = Math.floor(clamp(1 - sizeT, 0, 0.999) * (p.audioBands || AUDIO_BANDS));
+    var x = 0.15 + 0.7 * rng();
+    // Initial band from the spawn column. It is re-derived from the
+    // blob's position every substep (bandAt), so this only paints the
+    // very first render before the sim ticks.
+    var band = Math.floor(clamp(x / (16 / 9), 0, 0.999) * (p.audioBands || AUDIO_BANDS));
     return {
-        x: 0.15 + 0.7 * rng(),
+        x: x,
         y: 0.8 + 0.18 * rng(),      // blobs are born pooled at the bottom
         vx: 0,
         vy: 0,
@@ -143,6 +140,12 @@ function substep(state, dt, aspect, p) {
     // --- per-blob forces ---
     for (var i = 0; i < n; i++) {
         var b = blobs[i];
+
+        // Spatial banding: the screen is a visualizer sliced into one
+        // frequency column per band, bass on the left, treble on the
+        // right. A blob dances on the column it is over right now, so
+        // merges, splits and drift re-band the wax for free.
+        b.band = bandAt(b.x, aspect, p.audioBands);
 
         // Heat exchange with the lamp's zones.
         var inHeater = Math.max(0, 1 - Math.abs(1 - b.y) / p.heaterZone); // near y=1
@@ -438,6 +441,14 @@ function beatKick(state, strength, loBand, hiBand) {
     }
 }
 
+// The visualizer is spatial: the screen is sliced left-to-right into one
+// frequency column per band — bass lives on the left, treble on the
+// right, wherever the wax happens to be.
+function bandAt(x, aspect, nBands) {
+    var a = typeof aspect === "number" && aspect > 0 ? aspect : 16 / 9;
+    return Math.floor(clamp(x / a, 0, 0.999) * (nBands || AUDIO_BANDS));
+}
+
 // ------------------------------------------------------- liquid dynamics
 
 // Relative speed of two blobs, in aspect-corrected units per second.
@@ -548,5 +559,5 @@ if (typeof module !== "undefined" && module.exports)
                        createState: createState, applyConfig: applyConfig,
                        step: step, packUniforms: packUniforms,
                        setPointer: setPointer, poke: poke,
-                       setAudio: setAudio, beatKick: beatKick,
+                       setAudio: setAudio, beatKick: beatKick, bandAt: bandAt,
                        clamp: clamp };
