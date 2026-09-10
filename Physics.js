@@ -319,7 +319,7 @@ function packUniforms(state) {
         // band neighborhood swells and brightens, far bands barely.
         var d = b.band < beatLo ? beatLo - b.band
               : b.band > beatHi ? b.band - beatHi : 0;
-        var bw = 1 / (1 + d);
+        var bw = 1 / (1 + d * d);
         // Music swell: each blob breathes with the energy of its own band
         // — render-only (physics keeps the true r, so merging and splitting
         // are untouched). The slow sine makes it pump instead of just
@@ -425,7 +425,7 @@ function beatKick(state, strength, loBand, hiBand) {
         var b = blobs[i];
         var d = b.band < A.beatLo ? A.beatLo - b.band
               : b.band > A.beatHi ? b.band - A.beatHi : 0;
-        var w = 1 / (1 + d);
+        var w = 1 / (1 + d * d);
         var near = Math.max(0, 1 - Math.abs(1 - b.y) / (p.heaterZone * 3));
         if (near > 0)
             b.heat = clamp(b.heat + s * near * 0.15 * w, 0, 1);

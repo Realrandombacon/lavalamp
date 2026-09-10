@@ -485,6 +485,13 @@ Item {
     bassEma = bassEma * 0.98 + low * 0.02
     highEma = highEma * 0.97 + high * 0.03
     var now = Date.now() / 1000
+    // Routing ranges scale with the live band count (the 2..7 snare range
+    // was calibrated for cava's 8 bands): the kick takes the lowest
+    // eighth of the columns, the snare the 25%..87% slice.
+    var nB = raw.length
+    var kickHi = Math.max(1, Math.round(nB / 8))
+    var snareLo = Math.round(2 * nB / 8)
+    var snareHi = Math.round(7 * nB / 8)
     // Separate cooldowns: in a single drum hit the transient click (highs)
     // crosses the snare threshold a frame or two before the sub-bass peak
     // arrives; a shared cooldown swallowed every second kick.
@@ -496,7 +503,7 @@ Item {
         // instead of near-identical but visibly different ones.
         var kick = 0.28 * (0.5 + low)
         console.warn("lava kick low=" + low.toFixed(2) + " ema=" + bassEma.toFixed(2))
-        Physics.beatKick(simState, Math.round(kick / 0.05) * 0.05, 0, 1)
+        Physics.beatKick(simState, Math.round(kick / 0.05) * 0.05, 0, kickHi)
       }
     } else if (low > bassEma + 0.02 && low > 0.09 && now - kickLast > 0.05) {
       // Debug: a kick-sized spike that missed the threshold, presumably
@@ -507,7 +514,7 @@ Item {
       snareLast = now
       if (musicMode !== "glow") {
         var snap = 0.18 * (0.5 + high)
-        Physics.beatKick(simState, Math.round(snap / 0.05) * 0.05, 2, 7)
+        Physics.beatKick(simState, Math.round(snap / 0.05) * 0.05, snareLo, snareHi)
       }
     }
   }
