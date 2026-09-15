@@ -32,7 +32,7 @@ Item {
     // User-initiated closes route through shell.hide so the host's
     // open-panel state stays consistent; close() is the fallback.
     if (shell && typeof shell.hide === "function")
-      shell.hide((manifest && manifest.id) || "baco.background")
+      shell.hide((manifest && manifest.id) || "io.github.realrandombacon.lavalamp")
     else
       close()
   }

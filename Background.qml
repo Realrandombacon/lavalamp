@@ -683,7 +683,10 @@ Item {
   }
 
   IpcHandler {
-    target: "background"
+    // Namespaced so we never collide with the first-party omarchy.background
+    // service, which registers the bare "background" target first and would
+    // swallow every call meant for us.
+    target: "lavalamp.background"
 
     function refresh(): void {
       root.refreshBackground()

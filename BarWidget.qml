@@ -17,14 +17,17 @@ BarWidget {
     id: button
     anchors.fill: parent
     bar: root.bar
-    // Lit while the control panel is open (the panel routes through the
-    // shell's openPanelIds set, not through this widget).
-    active: root.bar && root.bar.shell ? root.bar.shell.openPanelIds["io.github.realrandombacon.lavalamp"] === true : false
+    // Lit while the control panel is open. Third-party bar widgets get a
+    // scoped shell (PluginShellApi) without openPanelIds, so ask through
+    // isPluginOpen() instead — available on both the root shell and the
+    // scoped plugin shell.
+    active: root.bar && root.bar.shell && typeof root.bar.shell.isPluginOpen === "function"
+      ? root.bar.shell.isPluginOpen(root.moduleName) === true : false
     text: "\uf06d"   // fa-fire — reads as lamp heat at bar size
     tooltipText: "Lava lamp settings"
 
     onPressed: function(buttonCode) {
-      if (root.bar && root.bar.shell) root.bar.shell.toggle("io.github.realrandombacon.lavalamp")
+      if (root.bar && root.bar.shell) root.bar.shell.toggle(root.moduleName)
     }
   }
 }
